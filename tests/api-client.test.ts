@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiRequest } from "@/lib/api/client";
-import { ApiError } from "@/lib/api/errors";
+import { ApiError, toHumanMessage } from "@/lib/api/errors";
 
 function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), {
@@ -59,6 +59,27 @@ describe("apiRequest", () => {
       status: 0,
       code: "NETWORK_ERROR",
     });
+  });
+
+  it("throws ApiError(409) on a conflict envelope, with the backend's own message passed through", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        jsonResponse({ error: { code: "CONFLICT", message: "Subscription is already canceled" } }, 409),
+      ),
+    );
+    await expect(apiRequest("/organizations/x/subscriptions/y", { accessToken: "token", method: "PATCH", body: {} })).rejects.toMatchObject(
+      { status: 409, code: "CONFLICT" },
+    );
+  });
+
+  it("gives a human message per status without ever exposing internals, per F17 brief Fase 20 (401/403/409/500)", () => {
+    expect(toHumanMessage(new ApiError(401, "UNAUTHORIZED", "expired"))).toMatch(/session has expired/i);
+    expect(toHumanMessage(new ApiError(403, "FORBIDDEN", "No active membership"))).toBe("No active membership");
+    expect(toHumanMessage(new ApiError(409, "CONFLICT", "Subscription is already canceled"))).toBe(
+      "Subscription is already canceled",
+    );
+    expect(toHumanMessage(new ApiError(500, "INTERNAL_ERROR", "boom"))).not.toMatch(/boom/);
   });
 
   it("sends no Authorization header when accessToken is null", async () => {
