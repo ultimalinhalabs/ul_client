@@ -97,12 +97,30 @@ Real permission keys are fetched from `GET /v1/roles/:roleKey` for the active me
 ## Development
 
 ```bash
-npm run dev         # http://localhost:3000
+npm run dev         # http://localhost:3002
 npm run typecheck
 npm run lint
 npm test
 npm run build
 ```
+
+## Known deviations from the F17 brief
+
+Disclosed for completeness, not backend gaps (see `F17-BACKEND-GAPS.md` for those):
+
+- **Zod** is a dependency (parity with `ul-console`) but isn't actually used yet — no runtime
+  response validation, no client-side form schemas. Forms validate against the real backend error
+  instead. Worth adding if/when a page's input shape gets complex enough to justify it.
+- **Organization Settings** (Fase 5) isn't a standalone page/route — its content (name, editable
+  per `organization.update`) lives in Settings' "Organization" section instead. Once the active
+  organization is already namespaced into every URL (`/app/o/[organizationId]/...`), a separate
+  `/app/organizations` route duplicated what Settings already covers.
+- **AppShell / LoadingState / ErrorState** aren't separate named components. The shell (Sidebar +
+  Topbar + main) is composed inline in `OrganizationGate.tsx`; loading uses `Skeleton`/
+  `TableSkeleton`; errors use `Alert`. Same behavior, different file boundaries.
+- **Pagination**: no component was built. None of the tenant-facing list endpoints this app calls
+  (members, subscriptions, API keys, webhooks) support cursor/offset pagination on the backend —
+  they return full arrays — so there's nothing real to paginate against yet.
 
 ## Security
 
