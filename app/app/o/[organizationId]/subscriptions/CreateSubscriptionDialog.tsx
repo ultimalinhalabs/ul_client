@@ -4,7 +4,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Select } from "@/components/ui/Select";
-import { toHumanMessage } from "@/lib/api/errors";
+import { getErrorReference, toHumanMessage } from "@/lib/api/errors";
 import { useApplications } from "@/hooks/useApplications";
 import { usePlansForApplication } from "@/hooks/usePlans";
 import { useCreateSubscription } from "@/hooks/useSubscriptions";
@@ -24,7 +24,7 @@ export function CreateSubscriptionDialog({
   const [applicationKey, setApplicationKey] = useState("");
   const plansQuery = usePlansForApplication(applicationKey || undefined);
   const [planKey, setPlanKey] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const createSubscription = useCreateSubscription(organizationId);
   const pushToast = useToastStore((s) => s.push);
 
@@ -41,7 +41,7 @@ export function CreateSubscriptionDialog({
     createSubscription.mutate(
       { applicationKey, planKey },
       {
-        onError: (err) => setError(toHumanMessage(err)),
+        onError: setError,
         onSuccess: () => {
           pushToast({ tone: "success", message: "Subscription created." });
           handleClose();
@@ -53,7 +53,11 @@ export function CreateSubscriptionDialog({
   return (
     <Dialog open={open} onClose={handleClose} title="New subscription">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {error && <Alert tone="error" title="Could not create subscription">{error}</Alert>}
+        {error !== null && (
+          <Alert tone="error" title="Could not create subscription" reference={getErrorReference(error)}>
+            {toHumanMessage(error)}
+          </Alert>
+        )}
 
         {applicationsQuery.data && (
           <Select

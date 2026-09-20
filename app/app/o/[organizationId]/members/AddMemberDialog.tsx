@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { toHumanMessage } from "@/lib/api/errors";
+import { getErrorReference, toHumanMessage } from "@/lib/api/errors";
 import { useCreateMembership } from "@/hooks/useMembers";
 import { useRoles } from "@/hooks/useRoleDetail";
 import { useToastStore } from "@/lib/store/toastStore";
@@ -34,7 +34,7 @@ export function AddMemberDialog({
 
   const [userId, setUserId] = useState("");
   const [roleKey, setRoleKey] = useState("");
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
 
   function handleClose() {
     setUserId("");
@@ -49,7 +49,7 @@ export function AddMemberDialog({
     createMembership.mutate(
       { userId, roleKey: roleKey || rolesQuery.data?.[0]?.key || "" },
       {
-        onError: (err) => setError(toHumanMessage(err)),
+        onError: setError,
         onSuccess: () => {
           pushToast({ tone: "success", message: "Member added." });
           handleClose();
@@ -66,7 +66,11 @@ export function AddMemberDialog({
           them once they&apos;ve signed in.
         </p>
 
-        {error && <Alert tone="error" title="Could not add member">{error}</Alert>}
+        {error !== null && (
+          <Alert tone="error" title="Could not add member" reference={getErrorReference(error)}>
+            {toHumanMessage(error)}
+          </Alert>
+        )}
 
         <Input
           label="User ID"

@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { toHumanMessage } from "@/lib/api/errors";
+import { getErrorReference, toHumanMessage } from "@/lib/api/errors";
 import { useApplications } from "@/hooks/useApplications";
 import { useCreateWebhook } from "@/hooks/useWebhooks";
 import { X } from "lucide-react";
@@ -30,7 +30,7 @@ export function CreateWebhookDialog({
   const [url, setUrl] = useState("");
   const [eventTypeDraft, setEventTypeDraft] = useState("");
   const [eventTypes, setEventTypes] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const createWebhook = useCreateWebhook(organizationId);
 
   function handleClose() {
@@ -55,7 +55,7 @@ export function CreateWebhookDialog({
     createWebhook.mutate(
       { applicationKey, url, eventTypes },
       {
-        onError: (err) => setError(toHumanMessage(err)),
+        onError: setError,
         onSuccess: (endpoint) => {
           handleClose();
           onCreated(endpoint.secret);
@@ -69,7 +69,11 @@ export function CreateWebhookDialog({
   return (
     <Dialog open={open} onClose={handleClose} title="Add webhook endpoint">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {error && <Alert tone="error" title="Could not create webhook endpoint">{error}</Alert>}
+        {error !== null && (
+          <Alert tone="error" title="Could not create webhook endpoint" reference={getErrorReference(error)}>
+            {toHumanMessage(error)}
+          </Alert>
+        )}
 
         {applicationsQuery.data && (
           <Select

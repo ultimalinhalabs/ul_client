@@ -4,7 +4,7 @@ import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Dialog } from "@/components/ui/Dialog";
 import { Select } from "@/components/ui/Select";
-import { toHumanMessage } from "@/lib/api/errors";
+import { getErrorReference, toHumanMessage } from "@/lib/api/errors";
 import { useApplications } from "@/hooks/useApplications";
 import { useApplicationServiceScopes } from "@/hooks/useServiceScopes";
 import { useCreateApiKey } from "@/hooks/useApiKeys";
@@ -25,7 +25,7 @@ export function CreateApiKeyDialog({
   const [applicationKey, setApplicationKey] = useState("");
   const scopesQuery = useApplicationServiceScopes(applicationKey || undefined);
   const [selectedScopes, setSelectedScopes] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<unknown>(null);
   const createApiKey = useCreateApiKey(organizationId);
 
   function handleClose() {
@@ -45,7 +45,7 @@ export function CreateApiKeyDialog({
     createApiKey.mutate(
       { applicationKey, scopes: selectedScopes },
       {
-        onError: (err) => setError(toHumanMessage(err)),
+        onError: setError,
         onSuccess: (apiKey) => {
           handleClose();
           onCreated(apiKey.secret);
@@ -57,7 +57,11 @@ export function CreateApiKeyDialog({
   return (
     <Dialog open={open} onClose={handleClose} title="Create API key">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {error && <Alert tone="error" title="Could not create API key">{error}</Alert>}
+        {error !== null && (
+          <Alert tone="error" title="Could not create API key" reference={getErrorReference(error)}>
+            {toHumanMessage(error)}
+          </Alert>
+        )}
 
         {applicationsQuery.data && (
           <Select
