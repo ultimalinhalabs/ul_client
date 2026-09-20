@@ -1,0 +1,82 @@
+@import "tailwindcss";
+
+/**
+ * Client Console design tokens. Same family as UL Console (dark charcoal +
+ * warm accent, the Última Linha ecosystem pair) but its own product
+ * identity, not a literal copy (F17 brief, Fase 14): a slightly cooler
+ * charcoal and a champagne accent rather than console's gold — this is a
+ * tenant-facing SaaS surface, not an internal control-plane tool, so it
+ * reads as related but distinct. Fixed dark theme, no light mode — same
+ * reasoning as UL Console: a consistent palette matters more here than
+ * per-user theming.
+ */
+:root {
+  --color-charcoal: #1b1b1d;
+  --color-charcoal-raised: #232326;
+  --color-charcoal-overlay: #2a2a2e;
+  --color-border: #38383d;
+  --color-border-subtle: #2c2c30;
+
+  --color-champagne: #c9a66b;
+  --color-champagne-strong: #dfc08a;
+  --color-champagne-muted: #7a6640;
+
+  --color-text-primary: #f1efe9;
+  --color-text-secondary: #a7a39a;
+  --color-text-tertiary: #706c63;
+
+  --color-success: #4ade80;
+  --color-success-muted: #234a35;
+  --color-danger: #f87171;
+  --color-danger-muted: #4a2323;
+  --color-warning: #fbbf24;
+  --color-warning-muted: #4a3d18;
+  --color-neutral-status: #9ca3af;
+  --color-neutral-status-muted: #33363c;
+}
+
+@theme inline {
+  --color-charcoal: var(--color-charcoal);
+  --color-charcoal-raised: var(--color-charcoal-raised);
+  --color-charcoal-overlay: var(--color-charcoal-overlay);
+  --color-border: var(--color-border);
+  --color-border-subtle: var(--color-border-subtle);
+
+  --color-champagne: var(--color-champagne);
+  --color-champagne-strong: var(--color-champagne-strong);
+  --color-champagne-muted: var(--color-champagne-muted);
+
+  --color-text-primary: var(--color-text-primary);
+  --color-text-secondary: var(--color-text-secondary);
+  --color-text-tertiary: var(--color-text-tertiary);
+
+  --color-success: var(--color-success);
+  --color-success-muted: var(--color-success-muted);
+  --color-danger: var(--color-danger);
+  --color-danger-muted: var(--color-danger-muted);
+  --color-warning: var(--color-warning);
+  --color-warning-muted: var(--color-warning-muted);
+  --color-neutral-status: var(--color-neutral-status);
+  --color-neutral-status-muted: var(--color-neutral-status-muted);
+
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background: var(--color-charcoal);
+  color: var(--color-text-primary);
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+:focus-visible {
+  outline: 2px solid var(--color-champagne);
+  outline-offset: 2px;
+}
