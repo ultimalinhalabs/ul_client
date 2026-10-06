@@ -18,12 +18,12 @@ describe("CopySecretDialog", () => {
     render(<CopySecretDialog open onClose={() => {}} title="API key created" secret="ulk_abc123.def456" />);
 
     expect(screen.getByText("ulk_abc123.def456")).toBeInTheDocument();
-    expect(screen.getByText(/will not be shown again/i)).toBeInTheDocument();
+    expect(screen.getByText(/não voltará a ser mostrado/i)).toBeInTheDocument();
 
     // userEvent.setup() installs its own clipboard stub (for its .copy()/.paste()
     // emulation), which would silently replace the mock above — the static API
     // doesn't, same as ul-console's equivalent test.
-    await userEvent.click(screen.getByRole("button", { name: /copy/i }));
+    await userEvent.click(screen.getByRole("button", { name: /copiar/i }));
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith("ulk_abc123.def456");
   });
 });

@@ -2,7 +2,10 @@
 
 import { Button } from "@/components/ui/Button";
 import type { Membership } from "@/lib/api/types";
-import { Building2 } from "lucide-react";
+import logoCompact from "@/assets/logo/ul-logo-compact-original.png";
+import { roleLabel } from "@/lib/labels";
+import { ChevronRight } from "lucide-react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useEffect, useSyncExternalStore } from "react";
 
@@ -66,28 +69,40 @@ export function OrganizationPicker({ memberships }: { memberships: Membership[] 
   if (resolvedOrganizationId) return null;
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-8 px-4">
-      <div className="text-center">
-        <p className="text-sm font-semibold tracking-wide text-champagne">ÚLTIMA LINHA</p>
-        <h1 className="mt-1 text-lg font-medium text-text-primary">Choose an organization</h1>
+    <div className="flex min-h-dvh items-center justify-center px-4 py-12">
+      <div className="flex w-full max-w-sm flex-col gap-8">
+        <Image src={logoCompact} alt="Última Linha" width={75} height={20} className="h-5 w-auto self-start" priority />
+        <div>
+          <h1 className="text-title font-semibold text-fg">Escolha uma organização</h1>
+          <p className="mt-1.5 text-body text-fg-muted">Pertence a várias organizações. Pode mudar a qualquer momento.</p>
+        </div>
+        <ul className="flex flex-col gap-2">
+          {memberships.map((m) => (
+            <li key={m.organizationId}>
+              <button
+                type="button"
+                onClick={() => select(m.organizationId)}
+                className="group flex w-full items-center gap-3 rounded-lg border border-border-subtle bg-surface/60 px-4 py-3 text-left transition-colors duration-150 hover:border-border hover:bg-surface"
+              >
+                <span
+                  className="flex size-8 shrink-0 items-center justify-center rounded-md border border-border bg-canvas text-label font-semibold text-fg"
+                  aria-hidden
+                >
+                  {m.organizationName.trim().charAt(0).toUpperCase() || "?"}
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-body font-medium text-fg">{m.organizationName}</span>
+                  <span className="text-meta text-fg-subtle">{roleLabel(m.roleKey)}</span>
+                </span>
+                <ChevronRight className="size-4 text-fg-subtle transition-colors group-hover:text-fg" aria-hidden />
+              </button>
+            </li>
+          ))}
+        </ul>
+        <div>
+          <SignOutLink />
+        </div>
       </div>
-      <div className="flex w-full max-w-sm flex-col gap-2">
-        {memberships.map((m) => (
-          <button
-            key={m.organizationId}
-            type="button"
-            onClick={() => select(m.organizationId)}
-            className="flex items-center gap-3 rounded-md border border-border bg-charcoal-raised px-4 py-3 text-left hover:border-champagne-muted focus-visible:outline-2 focus-visible:outline-champagne"
-          >
-            <Building2 className="size-5 shrink-0 text-text-secondary" aria-hidden />
-            <span className="flex flex-col">
-              <span className="text-sm font-medium text-text-primary">{m.organizationName}</span>
-              <span className="text-xs text-text-secondary">{m.roleKey}</span>
-            </span>
-          </button>
-        ))}
-      </div>
-      <SignOutLink />
     </div>
   );
 }
@@ -105,7 +120,7 @@ function SignOutLink() {
         router.refresh();
       }}
     >
-      Sign out
+      Terminar sessão
     </Button>
   );
 }

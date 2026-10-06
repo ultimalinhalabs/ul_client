@@ -37,7 +37,7 @@ describe("Organization resolution (F17 brief, Fase 18 #1, #3, #4)", () => {
 
   it("shows onboarding, never a tenant dashboard, for a user with zero memberships", () => {
     render(<NoOrganizationState email="nobody@example.com" />);
-    expect(screen.getByText("No organization yet")).toBeInTheDocument();
+    expect(screen.getByText("Ainda sem organização")).toBeInTheDocument();
     expect(screen.getByText(/nobody@example.com/)).toBeInTheDocument();
     expect(screen.queryByText(/dashboard/i)).not.toBeInTheDocument();
   });
@@ -61,13 +61,13 @@ describe("Organization resolution (F17 brief, Fase 18 #1, #3, #4)", () => {
     render(<OrganizationPicker memberships={MEMBERSHIPS} />);
     await waitFor(() => expect(replace).toHaveBeenCalledWith("/app/o/org-a/dashboard"));
     // Never shows the picker UI while silently redirecting.
-    expect(screen.queryByText("Choose an organization")).not.toBeInTheDocument();
+    expect(screen.queryByText("Escolha uma organização")).not.toBeInTheDocument();
   });
 
   it("ignores a remembered organization the caller is no longer a member of, falling back to the picker", () => {
     localStorage.setItem("ul-client:last-organization-id", "org-not-a-member-of");
     render(<OrganizationPicker memberships={MEMBERSHIPS} />);
     expect(replace).not.toHaveBeenCalled();
-    expect(screen.getByText("Choose an organization")).toBeInTheDocument();
+    expect(screen.getByText("Escolha uma organização")).toBeInTheDocument();
   });
 });

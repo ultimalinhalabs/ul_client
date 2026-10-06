@@ -1,13 +1,14 @@
 "use client";
 
-import { Alert } from "@/components/ui/Alert";
+import { ErrorAlert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Dialog } from "@/components/ui/Dialog";
+import { Code } from "@/components/ui/Code";
+import { Dialog, DialogFooter } from "@/components/ui/Dialog";
 import { Select } from "@/components/ui/Select";
-import { getErrorReference, toHumanMessage } from "@/lib/api/errors";
+import { Skeleton } from "@/components/ui/Skeleton";
+import { useCreateApiKey } from "@/hooks/useApiKeys";
 import { useApplications } from "@/hooks/useApplications";
 import { useApplicationServiceScopes } from "@/hooks/useServiceScopes";
-import { useCreateApiKey } from "@/hooks/useApiKeys";
 import { useState } from "react";
 
 export function CreateApiKeyDialog({
@@ -55,19 +56,22 @@ export function CreateApiKeyDialog({
   }
 
   return (
-    <Dialog open={open} onClose={handleClose} title="Create API key">
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      title="Criar chave de API"
+      description="O segredo da chave é mostrado uma única vez, logo após a criação."
+    >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {error !== null && (
-          <Alert tone="error" title="Could not create API key" reference={getErrorReference(error)}>
-            {toHumanMessage(error)}
-          </Alert>
-        )}
+        {error !== null && <ErrorAlert title="Não foi possível criar a chave" error={error} />}
+        {applicationsQuery.isError && <ErrorAlert title="Não foi possível carregar as aplicações" error={applicationsQuery.error} />}
 
+        {applicationsQuery.isLoading && <Skeleton className="h-16 w-full" />}
         {applicationsQuery.data && (
           <Select
-            label="Application"
+            label="Aplicação"
             required
-            options={[{ value: "", label: "Select an application" }, ...applicationsQuery.data.map((a) => ({ value: a.key, label: a.name }))]}
+            options={[{ value: "", label: "Selecione uma aplicação" }, ...applicationsQuery.data.map((a) => ({ value: a.key, label: a.name }))]}
             value={applicationKey}
             onChange={(e) => {
               setApplicationKey(e.target.value);
@@ -76,34 +80,38 @@ export function CreateApiKeyDialog({
           />
         )}
 
+        {applicationKey && scopesQuery.isLoading && <Skeleton className="h-20 w-full" />}
         {applicationKey && scopesQuery.data && scopesQuery.data.scopes.length > 0 && (
-          <div className="flex flex-col gap-1.5">
-            <span className="text-sm font-medium text-text-primary">Scopes</span>
-            <div className="flex flex-col gap-1.5 rounded-md border border-border p-3">
+          <fieldset className="flex flex-col gap-1.5">
+            <legend className="mb-1.5 text-label font-medium text-fg">Permissões</legend>
+            <p className="-mt-0.5 mb-1 text-meta text-fg-subtle">Conceda apenas o que o seu sistema precisa.</p>
+            <div className="flex flex-col divide-y divide-border-subtle rounded-md border border-border">
               {scopesQuery.data.scopes.map((scope) => (
-                <label key={scope.key} className="flex items-center gap-2 text-sm text-text-primary">
+                <label key={scope.key} className="flex cursor-pointer items-start gap-3 px-3 py-2.5 transition-colors hover:bg-surface-hover/60">
                   <input
                     type="checkbox"
                     checked={selectedScopes.includes(scope.key)}
                     onChange={() => toggleScope(scope.key)}
-                    className="accent-champagne"
+                    className="mt-0.5 size-4 shrink-0 accent-[var(--color-accent)]"
                   />
-                  <span className="font-mono text-xs">{scope.key}</span>
-                  <span className="text-text-secondary">— {scope.description}</span>
+                  <span className="flex min-w-0 flex-col gap-0.5">
+                    <Code>{scope.key}</Code>
+                    <span className="text-label text-fg-muted">{scope.description}</span>
+                  </span>
                 </label>
               ))}
             </div>
-          </div>
+          </fieldset>
         )}
 
-        <div className="mt-1 flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={handleClose} disabled={createApiKey.isPending}>
-            Cancel
+        <DialogFooter>
+          <Button variant="secondary" onClick={handleClose} disabled={createApiKey.isPending}>
+            Cancelar
           </Button>
           <Button type="submit" loading={createApiKey.isPending} disabled={!applicationKey}>
-            Create
+            Criar chave
           </Button>
-        </div>
+        </DialogFooter>
       </form>
     </Dialog>
   );

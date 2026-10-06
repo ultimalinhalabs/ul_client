@@ -1,14 +1,16 @@
 "use client";
 
-import { Alert } from "@/components/ui/Alert";
+import { organizationHref } from "@/components/layout/navigation";
+import { ErrorAlert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Dialog } from "@/components/ui/Dialog";
+import { Dialog, DialogFooter } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { getErrorReference, toHumanMessage } from "@/lib/api/errors";
 import { useCreateMembership } from "@/hooks/useMembers";
 import { useRoles } from "@/hooks/useRoleDetail";
+import { roleLabel } from "@/lib/labels";
 import { useToastStore } from "@/lib/store/toastStore";
+import Link from "next/link";
 import { useState } from "react";
 
 /**
@@ -17,7 +19,8 @@ import { useState } from "react";
  * user's `userId` (a UUID), not an email. There is no user-lookup-by-email
  * endpoint to resolve one from an address a caller types here. See
  * F17-BACKEND-GAPS.md, Gap 1 — this form is honest about that requirement
- * rather than pretending an email field would work.
+ * rather than pretending an email field would work, and points to where
+ * the person can find and copy their own ID (Definições → Conta).
  */
 export function AddMemberDialog({
   open,
@@ -51,7 +54,7 @@ export function AddMemberDialog({
       {
         onError: setError,
         onSuccess: () => {
-          pushToast({ tone: "success", message: "Member added." });
+          pushToast({ tone: "success", message: "Membro adicionado." });
           handleClose();
         },
       },
@@ -59,45 +62,58 @@ export function AddMemberDialog({
   }
 
   return (
-    <Dialog open={open} onClose={handleClose} title="Add member">
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      title="Adicionar membro"
+      description="A pessoa tem de já ter iniciado sessão na Última Linha pelo menos uma vez."
+    >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        <p className="text-sm text-text-secondary">
-          The person must already have signed in to Última Linha at least once. Ask them for their user ID, or add
-          them once they&apos;ve signed in.
-        </p>
-
-        {error !== null && (
-          <Alert tone="error" title="Could not add member" reference={getErrorReference(error)}>
-            {toHumanMessage(error)}
-          </Alert>
-        )}
+        {error !== null && <ErrorAlert title="Não foi possível adicionar o membro" error={error} />}
 
         <Input
-          label="User ID"
-          hint="Supabase Auth user id (UUID)"
+          label="ID de utilizador"
+          hint={
+            <>
+              Peça-lhe o ID que aparece em{" "}
+              <Link
+                href={organizationHref(organizationId, "settings")}
+                onClick={handleClose}
+                className="text-fg underline underline-offset-2"
+              >
+                Definições → Conta
+              </Link>{" "}
+              depois de iniciar sessão.
+            </>
+          }
           required
           value={userId}
           onChange={(e) => setUserId(e.target.value)}
+          placeholder="00000000-0000-0000-0000-000000000000"
+          autoComplete="off"
+          spellCheck={false}
+          className="font-mono"
         />
 
         {rolesQuery.data && (
           <Select
-            label="Role"
+            label="Papel"
             required
-            options={rolesQuery.data.map((r) => ({ value: r.key, label: r.key }))}
+            options={rolesQuery.data.map((r) => ({ value: r.key, label: roleLabel(r.key) }))}
             value={roleKey || rolesQuery.data[0]?.key}
             onChange={(e) => setRoleKey(e.target.value)}
+            hint="Define o que a pessoa pode ver e fazer nesta organização."
           />
         )}
 
-        <div className="mt-1 flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={handleClose} disabled={createMembership.isPending}>
-            Cancel
+        <DialogFooter>
+          <Button variant="secondary" onClick={handleClose} disabled={createMembership.isPending}>
+            Cancelar
           </Button>
           <Button type="submit" loading={createMembership.isPending}>
-            Add member
+            Adicionar membro
           </Button>
-        </div>
+        </DialogFooter>
       </form>
     </Dialog>
   );

@@ -2,12 +2,12 @@
 
 import { Sidebar } from "@/components/layout/Sidebar";
 import { Topbar } from "@/components/layout/Topbar";
-import { Toaster } from "@/components/ui/Toaster";
-import { Button } from "@/components/ui/Button";
-import { EmptyState } from "@/components/ui/EmptyState";
+import { Button, buttonClasses } from "@/components/ui/Button";
+import { PageState } from "@/components/ui/PageState";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { Toaster } from "@/components/ui/Toaster";
+import { getErrorReference, toHumanMessage } from "@/lib/api/errors";
 import { ActiveOrganizationProvider, useMyMemberships } from "@/lib/organization/ActiveOrganizationContext";
-import { ShieldAlert } from "lucide-react";
 import Link from "next/link";
 
 /**
@@ -30,28 +30,46 @@ export function OrganizationGate({
   email: string;
   children: React.ReactNode;
 }) {
-  const { data: me, isLoading, isError } = useMyMemberships();
+  const { data: me, isLoading, isError, error, refetch, isRefetching } = useMyMemberships();
 
   if (isLoading) {
+    // Same silhouette as the real shell, so resolving the membership doesn't flash a different layout.
     return (
-      <div className="flex h-screen items-center justify-center bg-charcoal">
-        <div className="flex w-full max-w-md flex-col gap-3 px-4">
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
-          <Skeleton className="h-10 w-full" />
+      <div className="flex h-dvh" aria-busy="true" aria-label="A carregar a organização">
+        <div className="hidden w-64 shrink-0 flex-col gap-3 border-r border-border-subtle bg-sidebar p-4 lg:flex">
+          <Skeleton className="h-4 w-20" />
+          <Skeleton className="mt-4 h-9 w-full" />
+          <Skeleton className="mt-4 h-4 w-3/4" />
+          <Skeleton className="h-4 w-2/3" />
+          <Skeleton className="h-4 w-3/4" />
+        </div>
+        <div className="flex flex-1 flex-col">
+          <div className="h-14 border-b border-border-subtle" />
+          <div className="mx-auto flex w-full max-w-6xl flex-col gap-3 px-4 py-8 sm:px-6 lg:px-8">
+            <Skeleton className="h-6 w-48" />
+            <Skeleton className="h-4 w-80 max-w-full" />
+          </div>
         </div>
       </div>
     );
   }
 
   if (isError || !me) {
+    const reference = getErrorReference(error);
     return (
-      <div className="flex h-screen items-center justify-center px-4">
-        <EmptyState
-          icon={ShieldAlert}
-          title="Could not load your organizations"
-          description="Something went wrong reaching UL Platform. Try reloading the page."
-        />
+      <div className="flex min-h-dvh items-center justify-center">
+        <PageState
+          variant="error"
+          title="Não foi possível carregar as suas organizações"
+          actions={
+            <Button variant="secondary" onClick={() => refetch()} loading={isRefetching}>
+              Tentar novamente
+            </Button>
+          }
+        >
+          <p>{toHumanMessage(error)}</p>
+          {reference && <p className="mt-2 font-mono text-meta text-fg-subtle">{reference}</p>}
+        </PageState>
       </div>
     );
   }
@@ -60,28 +78,39 @@ export function OrganizationGate({
 
   if (!membership) {
     return (
-      <div className="flex h-screen flex-col items-center justify-center gap-4 px-4 text-center">
-        <ShieldAlert className="size-10 text-danger" aria-hidden />
-        <div>
-          <h1 className="text-lg font-medium text-text-primary">Access denied</h1>
-          <p className="mt-1 max-w-sm text-sm text-text-secondary">
-            {email} is authenticated, but has no active membership in this organization.
-          </p>
-        </div>
-        <Link href="/app">
-          <Button variant="secondary">Back to your organizations</Button>
-        </Link>
+      <div className="flex min-h-dvh items-center justify-center">
+        <PageState
+          variant="error"
+          eyebrow="403"
+          title="Acesso negado"
+          actions={
+            <Link href="/app" className={buttonClasses({ variant: "secondary" })}>
+              Voltar às suas organizações
+            </Link>
+          }
+        >
+          <span className="font-medium text-fg">{email}</span> tem sessão iniciada, mas não é membro ativo desta
+          organização.
+        </PageState>
       </div>
     );
   }
 
   return (
     <ActiveOrganizationProvider organizationId={organizationId} membership={membership}>
-      <div className="flex h-screen">
+      <div className="flex h-dvh">
+        <a
+          href="#conteudo"
+          className="sr-only z-50 rounded-md bg-fg px-3 py-2 text-body font-medium text-fg-inverse focus:not-sr-only focus:fixed focus:left-4 focus:top-3"
+        >
+          Saltar para o conteúdo
+        </a>
         <Sidebar />
-        <div className="flex flex-1 flex-col overflow-hidden">
+        <div className="flex min-w-0 flex-1 flex-col">
           <Topbar email={email} />
-          <main className="flex-1 overflow-y-auto px-6 py-6">{children}</main>
+          <main id="conteudo" tabIndex={-1} className="flex-1 overflow-y-auto outline-none">
+            <div className="mx-auto w-full max-w-6xl px-4 py-6 sm:px-6 sm:py-8 lg:px-8">{children}</div>
+          </main>
         </div>
         <Toaster />
       </div>

@@ -6,21 +6,22 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
  * ul-platform is NOT consistently cased: memberships/subscriptions use
  * lowercase ("active", "trialing", "past_due", "canceled"), API keys and
  * webhooks use uppercase ("ACTIVE", "REVOKED") — verified by reading the
- * real schema files. StatusBadge must style both, and must always display
- * the value exactly as the API sent it.
+ * real schema files. StatusBadge must recognise both casings, show a
+ * Portuguese business label, and keep the exact value the API sent in
+ * `title` (never re-cased); an unknown value is shown verbatim.
  */
 describe("StatusBadge", () => {
-  it("displays lowercase membership/subscription statuses exactly as received", () => {
+  it("labels lowercase membership/subscription statuses and keeps the raw value", () => {
     render(<StatusBadge status="past_due" />);
-    expect(screen.getByText("past_due")).toBeInTheDocument();
+    expect(screen.getByText("Pagamento em atraso")).toHaveAttribute("title", "past_due");
   });
 
-  it("displays uppercase API key/webhook statuses exactly as received", () => {
+  it("labels uppercase API key/webhook statuses and keeps the raw value", () => {
     render(<StatusBadge status="REVOKED" />);
-    expect(screen.getByText("REVOKED")).toBeInTheDocument();
+    expect(screen.getByText("Revogado")).toHaveAttribute("title", "REVOKED");
   });
 
-  it("falls back to a neutral style for an unrecognized status rather than crashing", () => {
+  it("shows an unrecognized status verbatim rather than guessing or crashing", () => {
     render(<StatusBadge status="SOMETHING_NEW" />);
     expect(screen.getByText("SOMETHING_NEW")).toBeInTheDocument();
   });

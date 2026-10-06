@@ -5,7 +5,7 @@ import { getServerSession } from "@/lib/supabase/server";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 
-export const metadata: Metadata = { title: "Your organizations" };
+export const metadata: Metadata = { title: "As suas organizações" };
 
 /**
  * F17 brief, Fase 1 routing decision: organizationId lives in the URL

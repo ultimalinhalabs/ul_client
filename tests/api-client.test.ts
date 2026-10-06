@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { apiRequest } from "@/lib/api/client";
-import { ApiError, toHumanMessage } from "@/lib/api/errors";
+import { ApiError, getErrorDetail, toHumanMessage } from "@/lib/api/errors";
 
 function jsonResponse(body: unknown, status = 200, headers: Record<string, string> = {}) {
   return new Response(JSON.stringify(body), {
@@ -74,12 +74,18 @@ describe("apiRequest", () => {
   });
 
   it("gives a human message per status without ever exposing internals, per F17 brief Fase 20 (401/403/409/500)", () => {
-    expect(toHumanMessage(new ApiError(401, "UNAUTHORIZED", "expired"))).toMatch(/session has expired/i);
-    expect(toHumanMessage(new ApiError(403, "FORBIDDEN", "No active membership"))).toBe("No active membership");
-    expect(toHumanMessage(new ApiError(409, "CONFLICT", "Subscription is already canceled"))).toBe(
-      "Subscription is already canceled",
-    );
-    expect(toHumanMessage(new ApiError(500, "INTERNAL_ERROR", "boom"))).not.toMatch(/boom/);
+    expect(toHumanMessage(new ApiError(401, "UNAUTHORIZED", "expired"))).toMatch(/sessão expirou/i);
+    // 403/409: a Portuguese summary, with ul-platform's own human-written message kept as the detail line.
+    const forbidden = new ApiError(403, "FORBIDDEN", "No active membership");
+    expect(toHumanMessage(forbidden)).toMatch(/permissão/i);
+    expect(getErrorDetail(forbidden)).toBe("No active membership");
+    const conflict = new ApiError(409, "CONFLICT", "Subscription is already canceled");
+    expect(toHumanMessage(conflict)).toMatch(/conflito/i);
+    expect(getErrorDetail(conflict)).toBe("Subscription is already canceled");
+    // 500: never shown, as the summary or as the detail.
+    const internal = new ApiError(500, "INTERNAL_ERROR", "boom");
+    expect(toHumanMessage(internal)).not.toMatch(/boom/);
+    expect(getErrorDetail(internal)).toBeNull();
   });
 
   it("sends no Authorization header when accessToken is null", async () => {

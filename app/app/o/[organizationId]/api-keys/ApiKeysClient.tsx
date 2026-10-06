@@ -1,33 +1,31 @@
 "use client";
 
 import { PermissionGate } from "@/components/auth/PermissionGate";
-import { Alert } from "@/components/ui/Alert";
+import { Column, DataTable } from "@/components/tables/DataTable";
+import { ErrorAlert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
+import { Code } from "@/components/ui/Code";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
 import { CopySecretDialog } from "@/components/ui/CopySecretDialog";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatusBadge } from "@/components/ui/StatusBadge";
 import { TableSkeleton } from "@/components/ui/Skeleton";
-import { Column, DataTable } from "@/components/tables/DataTable";
-import { getErrorReference, toHumanMessage } from "@/lib/api/errors";
-import type { ApiKey } from "@/lib/api/types";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useApiKeys, useRevokeApiKey } from "@/hooks/useApiKeys";
+import type { ApiKey } from "@/lib/api/types";
 import { useActiveOrganization } from "@/lib/organization/ActiveOrganizationContext";
 import { useToastStore } from "@/lib/store/toastStore";
-import { KeyRound } from "lucide-react";
+import { formatDate, toIsoString } from "@/lib/utils/format";
+import { Plus } from "lucide-react";
 import { useState } from "react";
 import { CreateApiKeyDialog } from "./CreateApiKeyDialog";
-
-function formatDate(value: string | null) {
-  return value ? new Date(value).toLocaleDateString() : "Never";
-}
 
 export function ApiKeysClient() {
   const { organizationId, permissions } = useActiveOrganization();
   const query = useApiKeys(organizationId);
   const revokeApiKey = useRevokeApiKey(organizationId);
   const pushToast = useToastStore((s) => s.push);
+  const pushError = useToastStore((s) => s.pushError);
 
   const [createOpen, setCreateOpen] = useState(false);
   const [revokeTarget, setRevokeTarget] = useState<ApiKey | null>(null);
@@ -38,26 +36,61 @@ export function ApiKeysClient() {
   function handleRevoke() {
     if (!revokeTarget) return;
     revokeApiKey.mutate(revokeTarget.id, {
-      onError: (error) => pushToast({ tone: "error", message: toHumanMessage(error) }),
+      onError: pushError,
       onSuccess: () => {
-        pushToast({ tone: "success", message: "API key revoked." });
+        pushToast({ tone: "success", message: `Chave de ${revokeTarget.application} revogada.` });
         setRevokeTarget(null);
       },
     });
   }
 
   const columns: Column<ApiKey>[] = [
-    { header: "Application", cell: (row) => row.application },
-    { header: "Status", cell: (row) => <StatusBadge status={row.status} /> },
-    { header: "Scopes", cell: (row) => (row.scopes.length > 0 ? row.scopes.join(", ") : "—") },
-    { header: "Expires", cell: (row) => formatDate(row.expiresAt) },
+    { header: "Aplicação", cell: (row) => <Code>{row.application}</Code> },
+    { header: "Estado", cell: (row) => <StatusBadge status={row.status} /> },
+    {
+      header: "Permissões",
+      hideBelow: "md",
+      cell: (row) =>
+        row.scopes.length > 0 ? (
+          <span className="flex flex-wrap gap-x-2 gap-y-1">
+            {row.scopes.map((scope) => (
+              <Code key={scope} muted>
+                {scope}
+              </Code>
+            ))}
+          </span>
+        ) : (
+          <span className="text-fg-subtle">Nenhuma</span>
+        ),
+    },
+    {
+      header: "Criada",
+      hideBelow: "lg",
+      cell: (row) => (
+        <time dateTime={toIsoString(row.createdAt)} className="whitespace-nowrap tabular-nums text-fg-muted">
+          {formatDate(row.createdAt)}
+        </time>
+      ),
+    },
+    {
+      header: "Expira",
+      hideBelow: "sm",
+      cell: (row) =>
+        row.expiresAt ? (
+          <time dateTime={toIsoString(row.expiresAt)} className="whitespace-nowrap tabular-nums text-fg-muted">
+            {formatDate(row.expiresAt)}
+          </time>
+        ) : (
+          <span className="text-fg-subtle">Nunca</span>
+        ),
+    },
     {
       header: "",
-      className: "text-right",
+      align: "right",
       cell: (row) =>
         canManage && row.status === "ACTIVE" ? (
-          <Button variant="ghost" size="sm" onClick={() => setRevokeTarget(row)}>
-            Revoke
+          <Button variant="ghost" size="sm" onClick={() => setRevokeTarget(row)} aria-label={`Revogar chave de ${row.application}`}>
+            Revogar
           </Button>
         ) : null,
     },
@@ -66,28 +99,31 @@ export function ApiKeysClient() {
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="API Keys"
-        description="Credentials this organization's own integrations use to call Última Linha applications."
+        title="Chaves de API"
+        description="Credenciais que os sistemas da sua organização usam para comunicar com as aplicações da Última Linha."
         actions={
           <PermissionGate permission="api_key.manage" permissions={permissions}>
-            <Button onClick={() => setCreateOpen(true)}>Create API key</Button>
+            <Button onClick={() => setCreateOpen(true)}>
+              <Plus aria-hidden />
+              Criar chave
+            </Button>
           </PermissionGate>
         }
       />
 
-      {query.isLoading && <TableSkeleton />}
+      {query.isLoading && <TableSkeleton cols={4} />}
 
-      {query.isError && (
-        <Alert tone="error" title="Could not load API keys" reference={getErrorReference(query.error)}>
-          {toHumanMessage(query.error)}
-        </Alert>
-      )}
+      {query.isError && <ErrorAlert title="Não foi possível carregar as chaves de API" error={query.error} />}
 
       {query.data &&
         (query.data.length === 0 ? (
-          <EmptyState icon={KeyRound} title="No API keys yet" />
+          <EmptyState
+            variant="table"
+            title="Ainda sem chaves de API"
+            description="Crie uma chave quando precisar de ligar um sistema seu a uma aplicação da Última Linha."
+          />
         ) : (
-          <DataTable columns={columns} rows={query.data} getRowKey={(row) => row.id} />
+          <DataTable caption="Chaves de API da organização" columns={columns} rows={query.data} getRowKey={(row) => row.id} />
         ))}
 
       <CreateApiKeyDialog
@@ -98,21 +134,23 @@ export function ApiKeysClient() {
       />
 
       {revealSecret && (
-        <CopySecretDialog
-          open={Boolean(revealSecret)}
-          onClose={() => setRevealSecret(null)}
-          title="API key created"
-          secret={revealSecret}
-        />
+        <CopySecretDialog open={Boolean(revealSecret)} onClose={() => setRevealSecret(null)} title="Chave de API criada" secret={revealSecret} />
       )}
 
       <ConfirmDialog
         open={Boolean(revokeTarget)}
         onClose={() => setRevokeTarget(null)}
         onConfirm={handleRevoke}
-        title="Revoke API key"
-        description="Any integration using this key will stop working immediately. This cannot be undone."
-        confirmLabel="Revoke"
+        title="Revogar chave de API"
+        description={
+          <>
+            A chave de <Code>{revokeTarget?.application}</Code> é invalidada de imediato. Qualquer sistema que ainda a use
+            deixa de funcionar.
+          </>
+        }
+        irreversible
+        reversibility="Uma chave revogada não pode ser reativada — terá de criar uma nova e atualizar os sistemas que a usam."
+        confirmLabel="Revogar chave"
         loading={revokeApiKey.isPending}
       />
     </div>

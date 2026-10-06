@@ -1,8 +1,8 @@
 "use client";
 
 import { Button } from "@/components/ui/Button";
+import { PageState } from "@/components/ui/PageState";
 import { createClient } from "@/lib/supabase/client";
-import { Building2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
 /**
@@ -24,18 +24,19 @@ export function NoOrganizationState({ email }: { email: string }) {
   }
 
   return (
-    <div className="flex min-h-screen flex-col items-center justify-center gap-4 px-4 text-center">
-      <Building2 className="size-10 text-text-tertiary" aria-hidden />
-      <div>
-        <h1 className="text-lg font-medium text-text-primary">No organization yet</h1>
-        <p className="mt-1 max-w-sm text-sm text-text-secondary">
-          {email} is signed in, but isn&apos;t a member of any organization. Ask an organization owner to add you,
-          or contact Última Linha to set one up.
-        </p>
-      </div>
-      <Button variant="secondary" onClick={handleSignOut}>
-        Sign out
-      </Button>
+    <div className="flex min-h-dvh items-center justify-center">
+      <PageState
+        variant="missing"
+        title="Ainda sem organização"
+        actions={
+          <Button variant="secondary" onClick={handleSignOut}>
+            Terminar sessão
+          </Button>
+        }
+      >
+        <span className="font-medium text-fg">{email}</span> tem sessão iniciada, mas ainda não pertence a nenhuma
+        organização. Peça ao proprietário da sua organização que o adicione, ou contacte a Última Linha para criar uma.
+      </PageState>
     </div>
   );
 }

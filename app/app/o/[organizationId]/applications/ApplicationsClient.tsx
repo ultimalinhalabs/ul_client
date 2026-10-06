@@ -1,57 +1,53 @@
 "use client";
 
-import { Alert } from "@/components/ui/Alert";
+import { organizationHref } from "@/components/layout/navigation";
+import { Column, DataTable } from "@/components/tables/DataTable";
+import { ErrorAlert } from "@/components/ui/Alert";
+import { buttonClasses } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
-import { StatusBadge } from "@/components/ui/StatusBadge";
 import { TableSkeleton } from "@/components/ui/Skeleton";
-import { Column, DataTable } from "@/components/tables/DataTable";
-import { getErrorReference, isForbidden, toHumanMessage } from "@/lib/api/errors";
-import type { OrganizationApplicationAccess } from "@/lib/api/types";
+import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useOrganizationApplications } from "@/hooks/useOrganizationApplications";
+import type { OrganizationApplicationAccess } from "@/lib/api/types";
 import { useActiveOrganization } from "@/lib/organization/ActiveOrganizationContext";
-import { Blocks } from "lucide-react";
+import Link from "next/link";
 
 export function ApplicationsClient() {
   const { organizationId } = useActiveOrganization();
   const query = useOrganizationApplications(organizationId);
 
   const columns: Column<OrganizationApplicationAccess>[] = [
-    { header: "Application", cell: (row) => row.application.name },
-    { header: "Plan", cell: (row) => row.plan.name },
-    { header: "Status", cell: (row) => <StatusBadge status={row.subscription.status} /> },
+    { header: "Aplicação", cell: (row) => <span className="font-medium text-fg">{row.application.name}</span> },
+    { header: "Plano", cell: (row) => <span className="text-fg-muted">{row.plan.name}</span> },
+    { header: "Estado da subscrição", cell: (row) => <StatusBadge status={row.subscription.status} /> },
   ];
 
   return (
     <div className="flex flex-col gap-6">
       <PageHeader
-        title="Applications"
-        description="Applications this organization has commercial access to, derived from its subscriptions."
+        title="Aplicações"
+        description="As aplicações da Última Linha a que a sua organização tem acesso, de acordo com as subscrições."
       />
 
-      {query.isLoading && <TableSkeleton />}
+      {query.isLoading && <TableSkeleton cols={3} />}
 
-      {query.isError && isForbidden(query.error) && (
-        <Alert tone="forbidden" title="You don't have permission to view application access">
-          Ask an organization owner or admin if you need to see this.
-        </Alert>
-      )}
-
-      {query.isError && !isForbidden(query.error) && (
-        <Alert tone="error" title="Could not load applications" reference={getErrorReference(query.error)}>
-          {toHumanMessage(query.error)}
-        </Alert>
-      )}
+      {query.isError && <ErrorAlert title="Não foi possível carregar as aplicações" error={query.error} />}
 
       {query.data &&
         (query.data.length === 0 ? (
           <EmptyState
-            icon={Blocks}
-            title="No application access yet"
-            description="This organization has no active subscriptions. See Subscriptions to add one."
+            variant="connection"
+            title="Ainda sem acesso a aplicações"
+            description="O acesso vem das subscrições ativas da organização."
+            action={
+              <Link href={organizationHref(organizationId, "subscriptions")} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+                Ver subscrições
+              </Link>
+            }
           />
         ) : (
-          <DataTable columns={columns} rows={query.data} getRowKey={(row) => row.application.key} />
+          <DataTable caption="Aplicações com acesso" columns={columns} rows={query.data} getRowKey={(row) => row.application.key} />
         ))}
     </div>
   );

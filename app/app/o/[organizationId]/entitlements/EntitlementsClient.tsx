@@ -1,16 +1,28 @@
 "use client";
 
-import { Alert } from "@/components/ui/Alert";
+import { organizationHref } from "@/components/layout/navigation";
+import { ErrorAlert } from "@/components/ui/Alert";
+import { buttonClasses } from "@/components/ui/Button";
+import { Code } from "@/components/ui/Code";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Panel } from "@/components/ui/Panel";
 import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { getErrorReference, toHumanMessage } from "@/lib/api/errors";
+import { Toolbar } from "@/components/ui/Toolbar";
 import { useEntitlements } from "@/hooks/useEntitlements";
 import { useOrganizationApplications } from "@/hooks/useOrganizationApplications";
 import { useActiveOrganization } from "@/lib/organization/ActiveOrganizationContext";
-import { Gauge } from "lucide-react";
+import Link from "next/link";
 import { useState } from "react";
+
+/** Booleans read as yes/no; everything else exactly as the Platform resolved it. */
+function formatEntitlementValue(value: unknown) {
+  if (value === true) return "Incluído";
+  if (value === false) return "Não incluído";
+  if (value === null || value === undefined) return "—";
+  return typeof value === "object" ? JSON.stringify(value) : String(value);
+}
 
 /** F17 brief, Fase 9: values presented exactly as the Platform resolves them — never recomputed client-side. */
 export function EntitlementsClient() {
@@ -22,48 +34,64 @@ export function EntitlementsClient() {
   const applicationKey = selectedApplicationKey || appsQuery.data?.[0]?.application.key || "";
 
   const entitlementsQuery = useEntitlements(organizationId, applicationKey);
+  const selected = appsQuery.data?.find((a) => a.application.key === applicationKey);
 
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Entitlements" description="What this organization's active subscription unlocks." />
+      <PageHeader title="Limites do plano" description="O que a subscrição ativa de cada aplicação inclui para a sua organização." />
 
-      {appsQuery.isLoading && <Skeleton className="h-10 w-64" />}
+      {appsQuery.isLoading && <Skeleton className="h-9 w-full sm:w-72" />}
+
+      {appsQuery.isError && <ErrorAlert title="Não foi possível carregar as aplicações" error={appsQuery.error} />}
 
       {appsQuery.data && appsQuery.data.length === 0 && (
-        <EmptyState icon={Gauge} title="No application access yet" description="Entitlements depend on an active subscription." />
+        <EmptyState
+          variant="connection"
+          title="Ainda sem acesso a aplicações"
+          description="Os limites dependem de uma subscrição ativa."
+          action={
+            <Link href={organizationHref(organizationId, "subscriptions")} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+              Ver subscrições
+            </Link>
+          }
+        />
       )}
 
       {appsQuery.data && appsQuery.data.length > 0 && (
         <>
-          <Select
-            label="Application"
-            className="max-w-xs"
-            options={appsQuery.data.map((a) => ({ value: a.application.key, label: a.application.name }))}
-            value={applicationKey}
-            onChange={(e) => setSelectedApplicationKey(e.target.value)}
+          <Toolbar
+            filters={
+              <Select
+                label="Aplicação"
+                fieldClassName="sm:w-72"
+                options={appsQuery.data.map((a) => ({ value: a.application.key, label: a.application.name }))}
+                value={applicationKey}
+                onChange={(e) => setSelectedApplicationKey(e.target.value)}
+              />
+            }
           />
 
-          {entitlementsQuery.isLoading && <Skeleton className="h-32 w-full" />}
+          {entitlementsQuery.isLoading && <Skeleton className="h-40 w-full" />}
 
-          {entitlementsQuery.isError && (
-            <Alert tone="error" title="Could not load entitlements" reference={getErrorReference(entitlementsQuery.error)}>
-              {toHumanMessage(entitlementsQuery.error)}
-            </Alert>
-          )}
+          {entitlementsQuery.isError && <ErrorAlert title="Não foi possível carregar os limites" error={entitlementsQuery.error} />}
 
           {entitlementsQuery.data && entitlementsQuery.data.entitlements.length === 0 && (
-            <EmptyState icon={Gauge} title="No entitlements for this application's plan" />
+            <EmptyState variant="table" title="Este plano não define limites" />
           )}
 
           {entitlementsQuery.data && entitlementsQuery.data.entitlements.length > 0 && (
-            <div className="overflow-hidden rounded-md border border-border-subtle">
-              {entitlementsQuery.data.entitlements.map((e) => (
-                <div key={e.key} className="flex items-center justify-between border-b border-border-subtle px-4 py-3 last:border-0">
-                  <span className="font-mono text-sm text-text-primary">{e.key}</span>
-                  <span className="text-sm text-text-secondary">{String(e.value)}</span>
-                </div>
-              ))}
-            </div>
+            <Panel title={selected?.application.name} description={selected ? `Plano ${selected.plan.name}` : undefined} bodyClassName="p-0">
+              <dl>
+                {entitlementsQuery.data.entitlements.map((e) => (
+                  <div key={e.key} className="flex items-center justify-between gap-4 border-b border-border-subtle px-5 py-3 last:border-0">
+                    <dt className="min-w-0">
+                      <Code muted>{e.key}</Code>
+                    </dt>
+                    <dd className="text-right text-body font-medium tabular-nums text-fg">{formatEntitlementValue(e.value)}</dd>
+                  </div>
+                ))}
+              </dl>
+            </Panel>
           )}
         </>
       )}

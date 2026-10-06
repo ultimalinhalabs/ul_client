@@ -6,48 +6,42 @@ import { cn } from "@/lib/utils/cn";
  * rather than guessed — and the API is NOT consistently cased: memberships
  * ("active"/"invited"/"suspended") and subscriptions
  * ("trialing"/"active"/"past_due"/"canceled") are lowercase, while API keys
- * and webhooks ("ACTIVE"/"REVOKED") are uppercase. This component matches
- * case-insensitively but always displays the value exactly as the API sent
- * it — it never re-cases the visible text. Conveys state through text + a
- * dot, never color alone.
+ * and webhooks ("ACTIVE"/"REVOKED") are uppercase. Matching is therefore
+ * case-insensitive. The visible label is Portuguese business language; the
+ * exact value the API sent stays available in `title`, and an unknown status
+ * is shown verbatim rather than guessed at. State = text + dot, never colour alone.
  */
-const STATUS_STYLES: Record<string, string> = {
-  active: "bg-success-muted text-success",
-  trialing: "bg-success-muted text-success",
-  invited: "bg-warning-muted text-warning",
-  inactive: "bg-neutral-status-muted text-neutral-status",
-  suspended: "bg-danger-muted text-danger",
-  past_due: "bg-warning-muted text-warning",
-  expired: "bg-warning-muted text-warning",
-  revoked: "bg-danger-muted text-danger",
-  canceled: "bg-neutral-status-muted text-neutral-status",
+const STATUSES: Record<string, { label: string; dot: string }> = {
+  active: { label: "Ativo", dot: "bg-success" },
+  trialing: { label: "Em período experimental", dot: "bg-success" },
+  invited: { label: "Convidado", dot: "bg-warning" },
+  inactive: { label: "Inativo", dot: "bg-neutral" },
+  suspended: { label: "Suspenso", dot: "bg-danger" },
+  past_due: { label: "Pagamento em atraso", dot: "bg-warning" },
+  expired: { label: "Expirado", dot: "bg-warning" },
+  revoked: { label: "Revogado", dot: "bg-danger" },
+  canceled: { label: "Cancelado", dot: "bg-neutral" },
 };
 
-const DOT_STYLES: Record<string, string> = {
-  active: "bg-success",
-  trialing: "bg-success",
-  invited: "bg-warning",
-  inactive: "bg-neutral-status",
-  suspended: "bg-danger",
-  past_due: "bg-warning",
-  expired: "bg-warning",
-  revoked: "bg-danger",
-  canceled: "bg-neutral-status",
-};
+export function statusLabel(status: string): string {
+  return STATUSES[status.toLowerCase()]?.label ?? status;
+}
+
+/** `{ value, label }` pairs for a status <Select> — `value` stays exactly the API's own casing. */
+export function statusOptions(statuses: readonly string[]) {
+  return statuses.map((value) => ({ value, label: statusLabel(value) }));
+}
 
 export function StatusBadge({ status }: { status: string }) {
-  const key = status.toLowerCase();
-  const known = key in STATUS_STYLES;
+  const known = STATUSES[status.toLowerCase()];
 
   return (
     <span
-      className={cn(
-        "inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium",
-        known ? STATUS_STYLES[key] : "bg-charcoal-overlay text-text-secondary",
-      )}
+      title={status}
+      className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border border-border bg-canvas/40 px-2 py-0.5 text-meta font-medium text-fg"
     >
-      <span className={cn("size-1.5 rounded-full", known ? DOT_STYLES[key] : "bg-text-tertiary")} aria-hidden />
-      {status}
+      <span className={cn("size-1.5 shrink-0 rounded-full", known?.dot ?? "bg-fg-subtle")} aria-hidden />
+      {known?.label ?? status}
     </span>
   );
 }

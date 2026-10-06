@@ -110,7 +110,8 @@ fabricated one.
 - Status values are **not** uniformly cased across the real API — memberships
   (`active`/`invited`/`suspended`) and subscriptions (`trialing`/`active`/`past_due`/`canceled`)
   are lowercase; API keys and webhooks (`ACTIVE`/`REVOKED`) are uppercase. `StatusBadge` matches
-  case-insensitively but always displays the value exactly as received — never re-cased.
+  case-insensitively and shows a Portuguese label; the exact value received stays in `title` (never
+  re-cased), and an unknown status is shown verbatim. Values sent back to the API keep its casing.
 
 ## 6. Permissions (Fase 3/6/17)
 
@@ -130,13 +131,26 @@ specifically, not on `membership.update`.
 
 ## 7. Design system
 
-- Same family as `ul-console` (dark charcoal + warm accent — the Última Linha ecosystem pair) but
-  its own identity, not a literal copy: a champagne accent (`--color-champagne`) rather than
-  console's gold. See `app/globals.css`.
-- No light mode — a fixed-identity operational tool, same reasoning as `ul-console`.
+- Official Última Linha brand, shared with `ul-console` (the earlier champagne accent was
+  retired in the UI refactor): UL Black `#1E1E1E` / UL Gold `#D89B46`. `app/globals.css` has two
+  token layers — `--ul-*` brand primitives (exact `ASSET_GUIDE.md` hex, the only hex in the code)
+  and semantic tokens components use (`bg-surface`, `text-fg-muted`, …). Type scale is
+  `text-title/heading/body/label/meta`; a new size must also go into `lib/utils/cn.ts`'s
+  tailwind-merge config or `cn()` drops colours.
+- Gold is an accent only (focus ring, active nav indicator, logo) — never a surface or a
+  button-at-rest fill. The primary button is Off-White.
+- No light mode — a fixed-identity product, same reasoning as `ul-console`.
 - Status is always text + a dot, never color alone.
+- UI copy is Portuguese (pt-AO norm) and business-oriented; role keys go through `lib/labels.ts`'s
+  `roleLabel()`. API identifiers (scope keys, event types) stay verbatim, in `Code`.
 - Reusable primitives live in `components/ui/*`; do not re-implement a Button/Input/Dialog/etc.
-  inline in a page.
+  inline in a page. Load errors: `ErrorAlert` (turns a 403 into a permission state). Mutation
+  errors: `useToastStore().pushError`. Destructive actions: `ConfirmDialog` with an explicit
+  `reversibility` — state the consequence the backend actually applies (verify it in
+  `ul-platform`, e.g. subscription cancel is immediate, not end-of-period).
+- The primitives are a local copy of `ul-console`'s — no shared package, no cross-repo import.
+  Keep them in step deliberately. Visual assets come from `assets/` per `ASSET_GUIDE.md`.
+- See `docs/ui-refactor-report.md` for the component inventory.
 
 ## 8. Conventions
 
