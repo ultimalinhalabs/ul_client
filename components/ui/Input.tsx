@@ -1,50 +1,77 @@
 import { cn } from "@/lib/utils/cn";
-import { type InputHTMLAttributes, forwardRef, useId } from "react";
+import { Search } from "lucide-react";
+import { type InputHTMLAttributes, type ReactNode, forwardRef } from "react";
+import { Field, controlClasses, useFieldIds } from "./Field";
 
 export interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
   label: string;
   error?: string;
-  hint?: string;
+  hint?: ReactNode;
+  hideLabel?: boolean;
+  /** Applied to the field wrapper (label + control + messages), not the <input>. */
+  fieldClassName?: string;
 }
 
 export const Input = forwardRef<HTMLInputElement, InputProps>(
-  ({ className, label, error, hint, id, ...props }, ref) => {
-    const generatedId = useId();
-    const inputId = id ?? generatedId;
-    const hintId = hint ? `${inputId}-hint` : undefined;
-    const errorId = error ? `${inputId}-error` : undefined;
+  ({ className, fieldClassName, label, error, hint, hideLabel, id, required, ...props }, ref) => {
+    const { controlId, hintId, errorId, describedBy } = useFieldIds(id, { hint, error });
 
     return (
-      <div className="flex flex-col gap-1.5">
-        <label htmlFor={inputId} className="text-sm font-medium text-text-primary">
-          {label}
-        </label>
+      <Field
+        label={label}
+        controlId={controlId}
+        hint={hint}
+        hintId={hintId}
+        error={error}
+        errorId={errorId}
+        hideLabel={hideLabel}
+        className={fieldClassName}
+      >
         <input
           ref={ref}
-          id={inputId}
-          aria-invalid={Boolean(error)}
-          aria-describedby={cn(hintId, errorId) || undefined}
-          className={cn(
-            "h-10 rounded-md border border-border bg-charcoal-raised px-3 text-sm text-text-primary",
-            "placeholder:text-text-tertiary",
-            "focus-visible:outline-2 focus-visible:outline-champagne focus-visible:outline-offset-1",
-            error && "border-danger",
-            className,
-          )}
+          id={controlId}
+          required={required}
+          aria-invalid={Boolean(error) || undefined}
+          aria-describedby={describedBy}
+          className={cn(controlClasses, className)}
           {...props}
         />
-        {hint && !error && (
-          <span id={hintId} className="text-xs text-text-secondary">
-            {hint}
-          </span>
-        )}
-        {error && (
-          <span id={errorId} role="alert" className="text-xs text-danger">
-            {error}
-          </span>
-        )}
-      </div>
+      </Field>
     );
   },
 );
 Input.displayName = "Input";
+
+/** The one search control for list pages — a labelled Input with a leading icon. */
+export const SearchInput = forwardRef<HTMLInputElement, Omit<InputProps, "type">>(
+  ({ className, fieldClassName, label, hint, error, hideLabel, id, ...props }, ref) => {
+    const { controlId, hintId, errorId, describedBy } = useFieldIds(id, { hint, error });
+
+    return (
+      <Field
+        label={label}
+        controlId={controlId}
+        hint={hint}
+        hintId={hintId}
+        error={error}
+        errorId={errorId}
+        hideLabel={hideLabel}
+        className={fieldClassName}
+      >
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-fg-subtle" aria-hidden />
+          <input
+            ref={ref}
+            id={controlId}
+            type="search"
+            aria-invalid={Boolean(error) || undefined}
+            aria-describedby={describedBy}
+            className={cn(controlClasses, "pl-9 [&::-webkit-search-cancel-button]:hidden", className)}
+            {...props}
+          />
+        </div>
+      </Field>
+    );
+  },
+);
+SearchInput.displayName = "SearchInput";

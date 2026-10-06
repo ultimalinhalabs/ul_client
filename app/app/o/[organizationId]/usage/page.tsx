@@ -1,6 +1,6 @@
 import { UsageClient } from "./UsageClient";
 
-export const metadata = { title: "Usage" };
+export const metadata = { title: "Consumo" };
 
 export default function UsagePage() {
   return <UsageClient />;

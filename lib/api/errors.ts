@@ -23,44 +23,60 @@ export function isUnauthorized(error: unknown): error is ApiError {
   return error instanceof ApiError && error.status === 401;
 }
 
-/** True when the caller is authenticated but lacks the required permission/membership for this resource. */
+/** True when the caller is authenticated but lacks the required platform permission/role. */
 export function isForbidden(error: unknown): error is ApiError {
   return error instanceof ApiError && error.status === 403;
 }
 
 /**
- * A human sentence for display in an Alert — never the raw backend message
- * for 500s. 400/404/409 backend messages are already written for a human
- * reader (see ul-platform's route/service layer), so those pass through
- * as-is.
+ * The primary, Portuguese sentence for an Alert or toast. Translated by
+ * status/code — ul-platform's own messages are English and interpolated
+ * (`Application "X" already exists`), so they can't be mapped one-to-one;
+ * see getErrorDetail() for how they're still surfaced. A 500's message is
+ * never shown in any form — no raw technical messages.
  */
 export function toHumanMessage(error: unknown): string {
   if (error instanceof ApiError) {
     switch (error.status) {
-      case 401:
-        return "Your session has expired. Please sign in again.";
-      case 403:
-        return error.message || "You don't have permission to do this.";
-      case 404:
-        return error.message || "That resource could not be found.";
-      case 409:
-        return error.message || "This conflicts with the current state of the resource.";
+      case 0:
+        return "Não foi possível contactar a API da UL Platform. Verifique a ligação e tente novamente.";
       case 400:
-        return error.message || "Some of the information provided is invalid.";
+        return "Alguns dos dados enviados não são válidos.";
+      case 401:
+        return "A sua sessão expirou. Inicie sessão novamente.";
+      case 403:
+        return "Não tem permissão para realizar esta ação.";
+      case 404:
+        return "O recurso pedido não existe ou foi removido.";
+      case 409:
+        return "A operação entra em conflito com o estado atual do recurso.";
       default:
-        return "Something went wrong on the platform's side. Please try again.";
+        return "Ocorreu um erro na UL Platform. Tente novamente dentro de instantes.";
     }
   }
-  if (error instanceof Error) return error.message;
-  return "An unexpected error occurred.";
+  return "Ocorreu um erro inesperado. Tente novamente.";
+}
+
+/**
+ * The backend's own message as a secondary line — for the statuses where
+ * ul-platform writes it for a human reader and it carries the specific
+ * "which" the Portuguese summary can't (the conflicting key, the missing
+ * permission name). Never for 401 (redundant), 0 (our own text) or 5xx
+ * (may contain internals).
+ */
+export function getErrorDetail(error: unknown): string | null {
+  if (!(error instanceof ApiError)) return null;
+  if (![400, 403, 404, 409].includes(error.status)) return null;
+  return error.message || null;
 }
 
 /**
  * A discreet support reference for an Alert's footer — never the primary
- * message. `null` when there is nothing to show (a network failure never
- * reached the server, so there is no server-assigned request to reference).
+ * message — it helps support correlate a report without exposing internals. `null` when there
+ * is nothing to show (a network failure never reached the server, so
+ * there is no server-assigned request to reference).
  */
 export function getErrorReference(error: unknown): string | null {
-  if (error instanceof ApiError && error.requestId) return `Reference: ${error.requestId}`;
+  if (error instanceof ApiError && error.requestId) return `Referência: ${error.requestId}`;
   return null;
 }

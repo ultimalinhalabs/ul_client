@@ -70,7 +70,7 @@ describe("OrganizationGate (multi-tenant access control)", () => {
       </OrganizationGate>,
     );
 
-    expect(await screen.findByText("Access denied")).toBeInTheDocument();
+    expect(await screen.findByText("Acesso negado")).toBeInTheDocument();
     expect(screen.queryByText("dashboard content")).not.toBeInTheDocument();
   });
 });

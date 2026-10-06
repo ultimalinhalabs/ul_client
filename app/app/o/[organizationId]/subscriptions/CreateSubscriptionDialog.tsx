@@ -1,10 +1,10 @@
 "use client";
 
-import { Alert } from "@/components/ui/Alert";
+import { ErrorAlert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Dialog } from "@/components/ui/Dialog";
+import { Dialog, DialogFooter } from "@/components/ui/Dialog";
 import { Select } from "@/components/ui/Select";
-import { getErrorReference, toHumanMessage } from "@/lib/api/errors";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useApplications } from "@/hooks/useApplications";
 import { usePlansForApplication } from "@/hooks/usePlans";
 import { useCreateSubscription } from "@/hooks/useSubscriptions";
@@ -43,7 +43,7 @@ export function CreateSubscriptionDialog({
       {
         onError: setError,
         onSuccess: () => {
-          pushToast({ tone: "success", message: "Subscription created." });
+          pushToast({ tone: "success", message: "Subscrição criada." });
           handleClose();
         },
       },
@@ -51,19 +51,22 @@ export function CreateSubscriptionDialog({
   }
 
   return (
-    <Dialog open={open} onClose={handleClose} title="New subscription">
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      title="Nova subscrição"
+      description="Escolha a aplicação e o plano. O plano define os limites disponíveis para a sua organização."
+    >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {error !== null && (
-          <Alert tone="error" title="Could not create subscription" reference={getErrorReference(error)}>
-            {toHumanMessage(error)}
-          </Alert>
-        )}
+        {error !== null && <ErrorAlert title="Não foi possível criar a subscrição" error={error} />}
+        {applicationsQuery.isError && <ErrorAlert title="Não foi possível carregar as aplicações" error={applicationsQuery.error} />}
 
+        {applicationsQuery.isLoading && <Skeleton className="h-16 w-full" />}
         {applicationsQuery.data && (
           <Select
-            label="Application"
+            label="Aplicação"
             required
-            options={[{ value: "", label: "Select an application" }, ...applicationsQuery.data.map((a) => ({ value: a.key, label: a.name }))]}
+            options={[{ value: "", label: "Selecione uma aplicação" }, ...applicationsQuery.data.map((a) => ({ value: a.key, label: a.name }))]}
             value={applicationKey}
             onChange={(e) => {
               setApplicationKey(e.target.value);
@@ -72,24 +75,27 @@ export function CreateSubscriptionDialog({
           />
         )}
 
+        {applicationKey && plansQuery.isLoading && <Skeleton className="h-16 w-full" />}
+        {applicationKey && plansQuery.isError && <ErrorAlert title="Não foi possível carregar os planos" error={plansQuery.error} />}
         {applicationKey && plansQuery.data && (
           <Select
-            label="Plan"
+            label="Plano"
             required
-            options={[{ value: "", label: "Select a plan" }, ...plansQuery.data.map((p) => ({ value: p.key, label: p.name }))]}
+            options={[{ value: "", label: "Selecione um plano" }, ...plansQuery.data.map((p) => ({ value: p.key, label: p.name }))]}
             value={planKey}
             onChange={(e) => setPlanKey(e.target.value)}
+            hint={plansQuery.data.length === 0 ? "Esta aplicação ainda não tem planos disponíveis." : undefined}
           />
         )}
 
-        <div className="mt-1 flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={handleClose} disabled={createSubscription.isPending}>
-            Cancel
+        <DialogFooter>
+          <Button variant="secondary" onClick={handleClose} disabled={createSubscription.isPending}>
+            Cancelar
           </Button>
           <Button type="submit" loading={createSubscription.isPending} disabled={!applicationKey || !planKey}>
-            Create subscription
+            Criar subscrição
           </Button>
-        </div>
+        </DialogFooter>
       </form>
     </Dialog>
   );

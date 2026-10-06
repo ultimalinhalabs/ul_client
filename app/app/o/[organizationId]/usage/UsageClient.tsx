@@ -1,16 +1,21 @@
 "use client";
 
-import { Alert } from "@/components/ui/Alert";
+import { organizationHref } from "@/components/layout/navigation";
+import { ErrorAlert } from "@/components/ui/Alert";
+import { buttonClasses } from "@/components/ui/Button";
+import { Code } from "@/components/ui/Code";
 import { EmptyState } from "@/components/ui/EmptyState";
 import { Input } from "@/components/ui/Input";
 import { PageHeader } from "@/components/ui/PageHeader";
+import { Panel } from "@/components/ui/Panel";
 import { Select } from "@/components/ui/Select";
 import { Skeleton } from "@/components/ui/Skeleton";
-import { getErrorReference, isForbidden, toHumanMessage } from "@/lib/api/errors";
+import { Toolbar } from "@/components/ui/Toolbar";
 import { useOrganizationApplications } from "@/hooks/useOrganizationApplications";
 import { useUsageForApplication } from "@/hooks/useUsage";
 import { useActiveOrganization } from "@/lib/organization/ActiveOrganizationContext";
-import { Gauge } from "lucide-react";
+import { formatDate, formatQuantity } from "@/lib/utils/format";
+import Link from "next/link";
 import { useState } from "react";
 
 export function UsageClient() {
@@ -27,59 +32,73 @@ export function UsageClient() {
     to: to || undefined,
   });
 
+  const selected = appsQuery.data?.find((a) => a.application.key === applicationKey);
+  const periodLabel =
+    from || to ? `${from ? formatDate(`${from}T00:00:00`) : "início"} – ${to ? formatDate(`${to}T00:00:00`) : "hoje"}` : "Todo o período";
+
   return (
     <div className="flex flex-col gap-6">
-      <PageHeader title="Usage" description="Metered activity Última Linha applications have recorded for this organization." />
+      <PageHeader title="Consumo" description="A atividade medida que as aplicações da Última Linha registaram para a sua organização." />
 
-      {appsQuery.isLoading && <Skeleton className="h-10 w-64" />}
+      {appsQuery.isLoading && <Skeleton className="h-9 w-full sm:w-72" />}
+
+      {appsQuery.isError && <ErrorAlert title="Não foi possível carregar as aplicações" error={appsQuery.error} />}
 
       {appsQuery.data && appsQuery.data.length === 0 && (
-        <EmptyState icon={Gauge} title="No application access yet" description="Usage is recorded per subscribed application." />
+        <EmptyState
+          variant="connection"
+          title="Ainda sem acesso a aplicações"
+          description="O consumo é registado por cada aplicação subscrita."
+          action={
+            <Link href={organizationHref(organizationId, "subscriptions")} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+              Ver subscrições
+            </Link>
+          }
+        />
       )}
 
       {appsQuery.data && appsQuery.data.length > 0 && (
         <>
-          <div className="flex flex-wrap items-end gap-3">
-            <Select
-              label="Application"
-              className="max-w-xs"
-              options={appsQuery.data.map((a) => ({ value: a.application.key, label: a.application.name }))}
-              value={applicationKey}
-              onChange={(e) => setSelectedApplicationKey(e.target.value)}
-            />
-            <Input label="From" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-            <Input label="To" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </div>
+          <Toolbar
+            filters={
+              <>
+                <Select
+                  label="Aplicação"
+                  fieldClassName="sm:w-64"
+                  options={appsQuery.data.map((a) => ({ value: a.application.key, label: a.application.name }))}
+                  value={applicationKey}
+                  onChange={(e) => setSelectedApplicationKey(e.target.value)}
+                />
+                <Input label="De" type="date" value={from} onChange={(e) => setFrom(e.target.value)} fieldClassName="sm:w-44" />
+                <Input label="Até" type="date" value={to} onChange={(e) => setTo(e.target.value)} fieldClassName="sm:w-44" />
+              </>
+            }
+          />
 
-          {usageQuery.isLoading && <Skeleton className="h-32 w-full" />}
+          {usageQuery.isLoading && <Skeleton className="h-40 w-full" />}
 
-          {usageQuery.isError && isForbidden(usageQuery.error) && (
-            <Alert tone="forbidden" title="You don't have permission to view usage">
-              Ask an organization owner, admin or manager if you need to see this.
-            </Alert>
-          )}
-
-          {usageQuery.isError && !isForbidden(usageQuery.error) && (
-            <Alert tone="error" title="Could not load usage" reference={getErrorReference(usageQuery.error)}>
-              {toHumanMessage(usageQuery.error)}
-            </Alert>
-          )}
+          {usageQuery.isError && <ErrorAlert title="Não foi possível carregar o consumo" error={usageQuery.error} />}
 
           {usageQuery.data && usageQuery.data.meters.length === 0 && (
-            <EmptyState icon={Gauge} title="No usage recorded" description="Nothing has been reported for this period yet." />
+            <EmptyState variant="inbox" title="Sem consumo registado" description="Ainda não foi reportado nada para este período." />
           )}
 
           {usageQuery.data && usageQuery.data.meters.length > 0 && (
-            <div className="overflow-hidden rounded-md border border-border-subtle">
-              {usageQuery.data.meters.map((meter) => (
-                <div key={meter.meterKey} className="flex items-center justify-between border-b border-border-subtle px-4 py-3 last:border-0">
-                  <span className="font-mono text-sm text-text-primary">{meter.meterKey}</span>
-                  <span className="text-sm text-text-secondary">
-                    {meter.total ?? "0"} {meter.meterUnit}
-                  </span>
-                </div>
-              ))}
-            </div>
+            <Panel title={selected?.application.name} description={periodLabel} bodyClassName="p-0">
+              <dl>
+                {usageQuery.data.meters.map((meter) => (
+                  <div key={meter.meterKey} className="flex items-center justify-between gap-4 border-b border-border-subtle px-5 py-3 last:border-0">
+                    <dt className="min-w-0">
+                      <Code muted>{meter.meterKey}</Code>
+                    </dt>
+                    <dd className="text-right">
+                      <span className="text-body font-semibold tabular-nums text-fg">{formatQuantity(meter.total)}</span>{" "}
+                      <span className="text-label text-fg-muted">{meter.meterUnit}</span>
+                    </dd>
+                  </div>
+                ))}
+              </dl>
+            </Panel>
           )}
         </>
       )}

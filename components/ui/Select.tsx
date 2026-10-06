@@ -1,6 +1,7 @@
 import { cn } from "@/lib/utils/cn";
 import { ChevronDown } from "lucide-react";
-import { type SelectHTMLAttributes, forwardRef, useId } from "react";
+import { type ReactNode, type SelectHTMLAttributes, forwardRef } from "react";
+import { Field, controlClasses, useFieldIds } from "./Field";
 
 export interface SelectOption {
   value: string;
@@ -11,31 +12,35 @@ export interface SelectProps extends SelectHTMLAttributes<HTMLSelectElement> {
   label: string;
   options: SelectOption[];
   error?: string;
+  hint?: ReactNode;
+  hideLabel?: boolean;
+  /** Applied to the field wrapper (label + control + messages), not the <select>. */
+  fieldClassName?: string;
 }
 
+/** A native <select> on purpose — keyboard, screen-reader and mobile pickers all come from the platform. */
 export const Select = forwardRef<HTMLSelectElement, SelectProps>(
-  ({ className, label, options, error, id, ...props }, ref) => {
-    const generatedId = useId();
-    const selectId = id ?? generatedId;
+  ({ className, fieldClassName, label, options, error, hint, hideLabel, id, ...props }, ref) => {
+    const { controlId, hintId, errorId, describedBy } = useFieldIds(id, { hint, error });
 
     return (
-      <div className="flex flex-col gap-1.5">
-        {label && (
-          <label htmlFor={selectId} className="text-sm font-medium text-text-primary">
-            {label}
-          </label>
-        )}
+      <Field
+        label={label}
+        controlId={controlId}
+        hint={hint}
+        hintId={hintId}
+        error={error}
+        errorId={errorId}
+        hideLabel={hideLabel}
+        className={fieldClassName}
+      >
         <div className="relative">
           <select
             ref={ref}
-            id={selectId}
-            aria-invalid={Boolean(error)}
-            className={cn(
-              "h-10 w-full appearance-none rounded-md border border-border bg-charcoal-raised px-3 pr-9 text-sm text-text-primary",
-              "focus-visible:outline-2 focus-visible:outline-champagne focus-visible:outline-offset-1",
-              error && "border-danger",
-              className,
-            )}
+            id={controlId}
+            aria-invalid={Boolean(error) || undefined}
+            aria-describedby={describedBy}
+            className={cn(controlClasses, "appearance-none pr-9", className)}
             {...props}
           >
             {options.map((option) => (
@@ -45,16 +50,11 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             ))}
           </select>
           <ChevronDown
-            className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-text-secondary"
+            className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-fg-subtle"
             aria-hidden
           />
         </div>
-        {error && (
-          <span role="alert" className="text-xs text-danger">
-            {error}
-          </span>
-        )}
-      </div>
+      </Field>
     );
   },
 );

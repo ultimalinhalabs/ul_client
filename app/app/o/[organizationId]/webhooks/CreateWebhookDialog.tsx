@@ -1,11 +1,11 @@
 "use client";
 
-import { Alert } from "@/components/ui/Alert";
+import { ErrorAlert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { Dialog } from "@/components/ui/Dialog";
+import { Dialog, DialogFooter } from "@/components/ui/Dialog";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
-import { getErrorReference, toHumanMessage } from "@/lib/api/errors";
+import { Skeleton } from "@/components/ui/Skeleton";
 import { useApplications } from "@/hooks/useApplications";
 import { useCreateWebhook } from "@/hooks/useWebhooks";
 import { X } from "lucide-react";
@@ -65,67 +65,97 @@ export function CreateWebhookDialog({
   }
 
   const draftInvalid = eventTypeDraft.length > 0 && !EVENT_TYPE_PATTERN.test(eventTypeDraft);
+  const duplicate = eventTypes.includes(eventTypeDraft.trim());
 
   return (
-    <Dialog open={open} onClose={handleClose} title="Add webhook endpoint">
+    <Dialog
+      open={open}
+      onClose={handleClose}
+      title="Adicionar endpoint de webhook"
+      description="O segredo de assinatura é mostrado uma única vez, logo após a criação."
+    >
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-        {error !== null && (
-          <Alert tone="error" title="Could not create webhook endpoint" reference={getErrorReference(error)}>
-            {toHumanMessage(error)}
-          </Alert>
-        )}
+        {error !== null && <ErrorAlert title="Não foi possível criar o endpoint" error={error} />}
+        {applicationsQuery.isError && <ErrorAlert title="Não foi possível carregar as aplicações" error={applicationsQuery.error} />}
 
+        {applicationsQuery.isLoading && <Skeleton className="h-16 w-full" />}
         {applicationsQuery.data && (
           <Select
-            label="Application"
+            label="Aplicação"
             required
-            options={[{ value: "", label: "Select an application" }, ...applicationsQuery.data.map((a) => ({ value: a.key, label: a.name }))]}
+            options={[{ value: "", label: "Selecione uma aplicação" }, ...applicationsQuery.data.map((a) => ({ value: a.key, label: a.name }))]}
             value={applicationKey}
             onChange={(e) => setApplicationKey(e.target.value)}
           />
         )}
 
-        <Input label="Endpoint URL" type="url" required placeholder="https://example.com/webhooks/ul" value={url} onChange={(e) => setUrl(e.target.value)} />
+        <Input
+          label="URL do endpoint"
+          type="url"
+          inputMode="url"
+          required
+          placeholder="https://exemplo.ao/webhooks/ul"
+          value={url}
+          onChange={(e) => setUrl(e.target.value)}
+          hint="Guarde este endereço: a plataforma não o volta a mostrar depois da criação."
+          autoComplete="off"
+          spellCheck={false}
+          className="font-mono"
+        />
 
-        <div className="flex flex-col gap-1.5">
-          <Input
-            label="Event types"
-            hint='e.g. "payment.completed" — domain.action format'
-            error={draftInvalid ? "Must follow the domain.action format" : undefined}
-            value={eventTypeDraft}
-            onChange={(e) => setEventTypeDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addEventType();
-              }
-            }}
-          />
-          <Button type="button" variant="secondary" size="sm" onClick={addEventType} disabled={!eventTypeDraft || draftInvalid}>
-            Add event type
+        <div className="flex flex-col gap-2">
+          <div className="flex items-end gap-2">
+            <Input
+              label="Tipos de evento"
+              hint='Formato domínio.ação, p. ex. "payment.completed". Prima Enter para adicionar.'
+              error={draftInvalid ? "Use o formato domínio.ação (minúsculas)" : duplicate ? "Este evento já foi adicionado" : undefined}
+              value={eventTypeDraft}
+              onChange={(e) => setEventTypeDraft(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  e.preventDefault();
+                  addEventType();
+                }
+              }}
+              autoComplete="off"
+              spellCheck={false}
+              className="font-mono"
+              fieldClassName="flex-1"
+            />
+          </div>
+          <Button variant="secondary" size="sm" className="self-start" onClick={addEventType} disabled={!eventTypeDraft || draftInvalid || duplicate}>
+            Adicionar evento
           </Button>
           {eventTypes.length > 0 && (
-            <div className="flex flex-wrap gap-1.5 pt-1">
+            <ul className="flex flex-wrap gap-1.5 pt-1" aria-label="Eventos selecionados">
               {eventTypes.map((type) => (
-                <span key={type} className="flex items-center gap-1 rounded-full bg-charcoal-overlay px-2.5 py-1 font-mono text-xs text-text-primary">
+                <li
+                  key={type}
+                  className="flex items-center gap-1 rounded-full border border-border bg-inset py-0.5 pl-2.5 pr-1 font-mono text-meta text-fg"
+                >
                   {type}
-                  <button type="button" onClick={() => setEventTypes((prev) => prev.filter((t) => t !== type))} aria-label={`Remove ${type}`}>
+                  <button
+                    type="button"
+                    onClick={() => setEventTypes((prev) => prev.filter((t) => t !== type))}
+                    aria-label={`Remover ${type}`}
+                    className="rounded-full p-0.5 text-fg-subtle transition-colors hover:bg-surface-hover hover:text-fg"
+                  >
                     <X className="size-3" aria-hidden />
                   </button>
-                </span>
+                </li>
               ))}
-            </div>
+            </ul>
           )}
         </div>
 
-        <div className="mt-1 flex justify-end gap-2">
-          <Button type="button" variant="secondary" onClick={handleClose} disabled={createWebhook.isPending}>
-            Cancel
+        <DialogFooter>
+          <Button variant="secondary" onClick={handleClose} disabled={createWebhook.isPending}>
+            Cancelar
           </Button>
           <Button type="submit" loading={createWebhook.isPending} disabled={!applicationKey || !url || eventTypes.length === 0}>
-            Create
+            Criar endpoint
           </Button>
-        </div>
+        </DialogFooter>
       </form>
     </Dialog>
   );

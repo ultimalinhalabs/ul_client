@@ -1,16 +1,17 @@
 "use client";
 
+import { Alert } from "./Alert";
 import { Button } from "./Button";
-import { Dialog } from "./Dialog";
-import { Check, Copy } from "lucide-react";
-import { useState } from "react";
+import { CopyButton } from "./CopyButton";
+import { Dialog, DialogFooter } from "./Dialog";
 
 /**
  * F17 brief, Fase 10: the one place a freshly-issued secret (API key or
  * webhook signing secret) is ever displayed. The caller passing `secret`
  * in here MUST have gotten it from a create response, never re-fetched —
  * there is no GET that returns it again (ul-platform never stores or
- * re-derives it), so this dialog is the only chance to see or copy it.
+ * re-derives it), so this dialog is the only chance to see or copy it —
+ * which is why a stray click outside it never closes it.
  */
 export function CopySecretDialog({
   open,
@@ -23,32 +24,20 @@ export function CopySecretDialog({
   title: string;
   secret: string;
 }) {
-  const [copied, setCopied] = useState(false);
-
-  async function handleCopy() {
-    await navigator.clipboard.writeText(secret);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  }
-
   return (
-    <Dialog open={open} onClose={onClose} title={title}>
-      <p className="text-sm text-warning">
-        Save this secret now. It will not be shown again — there is no way to retrieve it later, only to revoke it
-        and issue a new one.
-      </p>
-      <div className="mt-4 flex items-center gap-2 rounded-md border border-border bg-charcoal-overlay p-3">
-        <code className="flex-1 overflow-x-auto whitespace-nowrap font-mono text-xs text-text-primary">{secret}</code>
-        <Button type="button" size="sm" variant="secondary" onClick={handleCopy}>
-          {copied ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
-          {copied ? "Copied" : "Copy"}
-        </Button>
+    <Dialog open={open} onClose={onClose} title={title} closeOnBackdrop={false}>
+      <div className="flex flex-col gap-4">
+        <Alert tone="warning" title="Guarde este segredo agora">
+          Não voltará a ser mostrado — não há forma de o recuperar depois, apenas de o revogar e emitir um novo.
+        </Alert>
+        <div className="flex flex-col gap-2 rounded-md border border-border bg-inset p-3 sm:flex-row sm:items-center">
+          <code className="min-w-0 flex-1 break-all font-mono text-label text-fg">{secret}</code>
+          <CopyButton value={secret} />
+        </div>
       </div>
-      <div className="mt-5 flex justify-end">
-        <Button type="button" onClick={onClose}>
-          Done
-        </Button>
-      </div>
+      <DialogFooter>
+        <Button onClick={onClose}>Concluído</Button>
+      </DialogFooter>
     </Dialog>
   );
 }
