@@ -24,4 +24,7 @@ export const orgKeys = {
       ? (["organization", organizationId, "usage", applicationKey, meterKey] as const)
       : (["organization", organizationId, "usage", applicationKey] as const),
   organization: (organizationId: string) => ["organization", organizationId, "detail"] as const,
+  // Block 2B — read-only commercial documents.
+  contracts: (organizationId: string) => ["organization", organizationId, "contracts"] as const,
+  contract: (organizationId: string, contractId: string) => ["organization", organizationId, "contracts", contractId] as const,
 };

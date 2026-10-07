@@ -6,6 +6,19 @@
  * the brief's assumed shape and the real one diverge.
  */
 
+/**
+ * One application the organization has EFFECTIVE access to (ul-platform
+ * src/routes/v1/me.ts, Fase 6 + Block 1D): an active access row, the
+ * application active, and not ended with its contractual grant. Only present
+ * for an active membership in an active organization — otherwise `[]`.
+ */
+export interface MeApplication {
+  key: string;
+  /** The member's effective role in that application, or null when the application has no role catalog. */
+  roleKey: string | null;
+  roleSource: "explicit" | "fallback" | null;
+}
+
 export interface Membership {
   membershipId: string;
   organizationId: string;
@@ -14,11 +27,18 @@ export interface Membership {
   roleKey: string;
   /** "active" | "invited" | "suspended" — lowercase, per src/db/schema/memberships.ts */
   status: string;
+  /** "active" | "suspended" — lowercase, per src/db/schema/organizations.ts */
+  organization: { id: string; name: string; slug: string; status: string };
+  applications: MeApplication[];
 }
 
 export interface Me {
   userId: string;
   email: string | undefined;
+  /** Whether UL Auth confirmed this email — read server-side by ul-platform, never from the token's claims. */
+  emailVerified: boolean;
+  /** "active" | "disabled" (a disabled account is refused with 403 ACCOUNT_DISABLED before reaching here); null before the first sync. */
+  status: string | null;
   memberships: Membership[];
 }
 
@@ -140,4 +160,151 @@ export interface UsageForApplication {
 export interface ServiceScope {
   key: string;
   description: string;
+}
+
+// ---------------------------------------------------------------------------- Block 2B — commercial
+// Copied from ul-platform src/modules/commercial/{accessLinks,acceptance,contracts}.service.ts and
+// serializers.ts. Money is always a string of minor units (AOA: 1 Kz = 100) — never a float.
+
+export interface ProposalItemView {
+  /** "application_plan" | "service" | "support" | "one_off" | "custom" */
+  kind: string;
+  title: string;
+  description: string | null;
+  application: { name: string } | null;
+  plan: { name: string } | null;
+  quantity: number;
+  unitPriceMinor: string;
+  lineTotalMinor: string;
+  /** "one_time" | "monthly" | "yearly" */
+  billingPeriod: string;
+  durationMonths: number | null;
+}
+
+export interface ProposalOptionView {
+  name: string;
+  summary: string | null;
+  isRecommended: boolean;
+  totalMinor: string;
+  items: ProposalItemView[];
+}
+
+/** POST /v1/public/proposals/resolve — the public projection: no internal ids, hashes, tokens or organization. */
+export interface PublicProposal {
+  proposal: { number: string; prospectCompanyName: string; prospectTaxId: string | null; recipientName: string };
+  version: { versionNo: number; currency: string; validUntil: string; summary: string | null };
+  terms: { title: string; version: number; body: string };
+  options: ProposalOptionView[];
+  acceptance: { available: false };
+}
+
+/** GET /v1/me/proposals — proposals addressed to the caller's verified email. */
+export interface MyProposalSummary {
+  id: string;
+  number: string;
+  /** "sent" | "viewed" | "negotiation" | "accepted" */
+  status: string;
+  prospectCompanyName: string;
+  version: { id: string; versionNo: number; currency: string; validUntil: string | null } | null;
+}
+
+export interface ProposalAcceptance {
+  id: string;
+  proposalId: string;
+  versionId: string;
+  optionId: string;
+  organizationId: string;
+  contentSha256: string;
+  acceptedByUserId: string;
+  signerName: string;
+  signerTitle: string | null;
+  signerEmail: string;
+  termsTemplateId: string | null;
+  consentSha256: string;
+  acceptedAt: string;
+}
+
+/** GET /v1/proposals/:id — the recipient's authenticated view. `acceptable` is the backend's verdict, never recomputed here. */
+export interface RecipientProposal {
+  proposal: {
+    id: string;
+    number: string;
+    status: string;
+    prospectCompanyName: string;
+    prospectTaxId: string | null;
+    recipientName: string;
+    /** Set when UL addressed the proposal to an existing organization — acceptance must then be made for that one. */
+    organizationId: string | null;
+  };
+  version: { id: string; versionNo: number; currency: string; validUntil: string; summary: string | null; contentSha256: string; hashAlg: string };
+  terms: { key: string; version: number; title: string; body: string };
+  options: (ProposalOptionView & { id: string })[];
+  /** null when no approved consent statement is configured (production today) — acceptance is then unavailable. */
+  consent: { key: string; version: number; status: string; text: string } | null;
+  acceptance: (ProposalAcceptance & { contractId: string | null }) | null;
+  acceptable: boolean;
+}
+
+export interface AcceptProposalInput {
+  versionId: string;
+  optionId: string;
+  contentSha256: string;
+  organization?: { id: string } | { create: { name: string } };
+  signerName: string;
+  signerTitle?: string;
+  consent: true;
+}
+
+export interface ContractSummary {
+  id: string;
+  number: string;
+  organizationId: string;
+  sourceAcceptanceId: string;
+  /** "pending_activation" | "active" | "suspended" | "terminated" | "expired" | "cancelled" */
+  status: string;
+  currency: string;
+  totalMinor: string;
+  effectiveAt: string;
+  startsAt: string | null;
+  endsAt: string | null;
+  renewalPolicy: string;
+  currentVersion: { id: string; versionNo: number; contentSha256: string; termsSha256: string } | null;
+  createdAt: string;
+}
+
+/** POST /v1/proposals/:id/acceptance — 201 on the first acceptance, 200 when the same Idempotency-Key replays it. */
+export interface AcceptanceResult {
+  acceptance: ProposalAcceptance;
+  contract: ContractSummary | null;
+}
+
+export interface ContractItem {
+  id: string;
+  sort: number;
+  kind: string;
+  title: string;
+  description: string | null;
+  quantity: number;
+  unitPriceMinor: string;
+  lineTotalMinor: string;
+  billingPeriod: string;
+  durationMonths: number | null;
+}
+
+/** The frozen contract version (`ul.commercial.contract-version/1`) — only the parts this app reads. */
+export interface ContractSnapshot {
+  source: { proposalNumber: string; proposalVersionNo: number; acceptedAt: string };
+  parties: {
+    provider: { legalName: string; nif: string; registeredAddress: string; representative: { name: string; role: string } };
+    client: { organization: { id: string; name: string }; companyName: string; taxId: string | null; signer: { name: string; title: string | null; email: string } };
+  };
+  option: { name: string; summary: string | null; totalMinor: string };
+  items: { title: string; kind: string; application: { key: string; name: string } | null; plan: { key: string; name: string } | null }[];
+  terms: { title: string; version: number; body: string };
+}
+
+/** GET /v1/organizations/:id/contracts/:contractId (OWNER only). */
+export interface ContractDetail extends ContractSummary {
+  snapshot: ContractSnapshot | null;
+  items: ContractItem[];
 }

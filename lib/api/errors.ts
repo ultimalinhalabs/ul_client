@@ -29,6 +29,28 @@ export function isForbidden(error: unknown): error is ApiError {
 }
 
 /**
+ * Block 2B — ul-platform's specific error codes (src/shared/errors.ts and the
+ * routes that raise them), each turned into what the person can actually do
+ * about it. These take precedence over the generic per-status sentence below.
+ */
+const KNOWN_CODE_MESSAGES: Record<string, string> = {
+  ACCOUNT_DISABLED: "A sua conta está desativada. Contacte a Última Linha para a reativar.",
+  ORGANIZATION_SUSPENDED: "Esta organização está suspensa. Contacte a Última Linha para regularizar a situação.",
+  PLAN_REQUIRES_CONTRACT:
+    "Este plano é contratado através de uma proposta da Última Linha, não diretamente aqui. Fale com a equipa comercial.",
+  APPLICATION_ACCESS_REQUIRED:
+    "A organização ainda não tem acesso ativo a esta aplicação. O acesso fica disponível quando o contrato correspondente for ativado.",
+  SUBSCRIPTION_CONTRACT_MANAGED:
+    "Esta subscrição faz parte de um contrato e só pode ser alterada pela Última Linha. Contacte a equipa comercial.",
+  COMMERCIAL_RECORD_IMMUTABLE: "Este documento comercial já foi emitido e não pode ser alterado.",
+};
+
+/** True when the code is one of the specific states above — their Portuguese sentence is complete, so the English backend detail is not shown. */
+export function isKnownErrorCode(error: unknown): boolean {
+  return error instanceof ApiError && error.code in KNOWN_CODE_MESSAGES;
+}
+
+/**
  * The primary, Portuguese sentence for an Alert or toast. Translated by
  * status/code — ul-platform's own messages are English and interpolated
  * (`Application "X" already exists`), so they can't be mapped one-to-one;
@@ -37,6 +59,8 @@ export function isForbidden(error: unknown): error is ApiError {
  */
 export function toHumanMessage(error: unknown): string {
   if (error instanceof ApiError) {
+    const known = KNOWN_CODE_MESSAGES[error.code];
+    if (known) return known;
     switch (error.status) {
       case 0:
         return "Não foi possível contactar a API da UL Platform. Verifique a ligação e tente novamente.";
@@ -66,6 +90,7 @@ export function toHumanMessage(error: unknown): string {
  */
 export function getErrorDetail(error: unknown): string | null {
   if (!(error instanceof ApiError)) return null;
+  if (isKnownErrorCode(error)) return null;
   if (![400, 403, 404, 409].includes(error.status)) return null;
   return error.message || null;
 }

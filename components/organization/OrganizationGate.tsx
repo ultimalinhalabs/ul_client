@@ -96,6 +96,32 @@ export function OrganizationGate({
     );
   }
 
+  // Block 2B — ul-platform only serves an ACTIVE membership of an ACTIVE organization (requireOrganizationMembership /
+  // ORGANIZATION_SUSPENDED); /v1/me lists every membership with both statuses, so say why here instead of rendering
+  // a console in which every request would be refused.
+  if (membership.status !== "active" || membership.organization.status !== "active") {
+    const suspendedOrganization = membership.organization.status !== "active";
+    return (
+      <div className="flex min-h-dvh items-center justify-center">
+        <PageState
+          variant="error"
+          title={suspendedOrganization ? "Organização suspensa" : membership.status === "invited" ? "Convite por aceitar" : "Acesso suspenso"}
+          actions={
+            <Link href="/app" className={buttonClasses({ variant: "secondary" })}>
+              Voltar às suas organizações
+            </Link>
+          }
+        >
+          {suspendedOrganization
+            ? `${membership.organizationName} está suspensa. Contacte a Última Linha para regularizar a situação.`
+            : membership.status === "invited"
+              ? `O seu acesso a ${membership.organizationName} ainda não está ativo. Peça ao proprietário da organização que o confirme.`
+              : `O seu acesso a ${membership.organizationName} está suspenso. Fale com o proprietário da organização.`}
+        </PageState>
+      </div>
+    );
+  }
+
   return (
     <ActiveOrganizationProvider organizationId={organizationId} membership={membership}>
       <div className="flex h-dvh">

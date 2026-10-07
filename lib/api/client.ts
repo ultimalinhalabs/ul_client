@@ -17,6 +17,13 @@ export interface ApiRequestOptions {
    * for an unauthenticated caller — the API itself returns 401.
    */
   accessToken: string | null;
+  /**
+   * Extra request headers for the few endpoints whose contract needs one —
+   * today only `Idempotency-Key` on proposal acceptance. Note ul-platform's
+   * CORS allow-list (Authorization, Content-Type, X-Request-ID) means such a
+   * call must run server-side (a Server Action), never from the browser.
+   */
+  headers?: Record<string, string>;
 }
 
 /**
@@ -26,7 +33,7 @@ export interface ApiRequestOptions {
  * shape this app invents.
  */
 export async function apiRequest<T>(path: string, options: ApiRequestOptions): Promise<T> {
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { ...options.headers };
   if (options.accessToken) headers.Authorization = `Bearer ${options.accessToken}`;
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
 
@@ -35,6 +42,8 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions): P
     response = await fetch(`${API_BASE_URL}/v1${path}`, {
       method: options.method ?? "GET",
       headers,
+      // Tenant and identity data are never served from Next's data cache.
+      cache: "no-store",
       body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
     });
   } catch {

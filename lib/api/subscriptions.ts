@@ -11,23 +11,8 @@ export function getSubscription(accessToken: string | null, organizationId: stri
   });
 }
 
-export function createSubscription(
-  accessToken: string | null,
-  organizationId: string,
-  body: { applicationKey: string; planKey: string },
-) {
-  return apiRequest<Subscription>(`/organizations/${organizationId}/subscriptions`, {
-    accessToken,
-    method: "POST",
-    body,
-  });
-}
-
-/** Only cancellation is supported in v1 — {status: "canceled"} is the one valid body. */
-export function cancelSubscription(accessToken: string | null, organizationId: string, subscriptionId: string) {
-  return apiRequest<Subscription>(`/organizations/${organizationId}/subscriptions/${subscriptionId}`, {
-    accessToken,
-    method: "PATCH",
-    body: { status: "canceled" },
-  });
-}
+/**
+ * Block 2B: POST (create) and PATCH (cancel) exist in ul-platform but are not offered by this app —
+ * creation is refused for every plan (403 PLAN_REQUIRES_CONTRACT) and a contractual subscription only
+ * changes through its contract (409 SUBSCRIPTION_CONTRACT_MANAGED). Subscriptions come from activation.
+ */

@@ -33,10 +33,24 @@ export function formatDate(value: string | Date): string {
   return date ? dateFormatter.format(date) : "—";
 }
 
+const longDateFormatter = new Intl.DateTimeFormat(LOCALE, { day: "numeric", month: "long", year: "numeric" });
+
+/** Block 2B — documents (proposal validity, contract dates): "31 de outubro de 2026". "—" for an unparseable value. */
+export function formatLongDate(value: string | Date): string {
+  const date = toDate(value);
+  return date ? longDateFormatter.format(date) : "—";
+}
+
 /** Second precision, for audit trails, e.g. "30/09/2026, 14:05:09". */
 export function formatDateTime(value: string | Date): string {
   const date = toDate(value);
   return date ? dateTimeFormatter.format(date) : "—";
+}
+
+/** True when the instant is not in the future (a validity date that has passed). Meant for request-time evaluation in a Server Component. */
+export function isPastInstant(value: string | Date, now: number = Date.now()): boolean {
+  const date = toDate(value);
+  return date !== null && date.getTime() <= now;
 }
 
 /** A value suitable for `<time dateTime>` — the machine-readable half of the two above. */
@@ -58,4 +72,25 @@ export function formatQuantity(value: string | number | null): string {
   if (value === null) return "0";
   const text = String(value);
   return DECIMAL_PATTERN.test(text) ? numberFormatter.format(text as Intl.StringNumericLiteral) : text;
+}
+
+const MINOR_PATTERN = /^-?\d+$/;
+
+/**
+ * Block 2B — money from ul-platform's minor-unit strings (AOA: 1 Kz = 100),
+ * exact: the integer string is split with BigInt, never parsed into a float.
+ * AOA renders as `1 850,50 Kz` (the format documented above); any other
+ * currency keeps its ISO code as the suffix, e.g. `1 850,50 USD`. A value that
+ * is not an integer string is returned untouched rather than guessed at.
+ */
+export function formatMoneyMinor(minor: string, currency: string): string {
+  if (!MINOR_PATTERN.test(minor)) return minor;
+  const value = BigInt(minor);
+  const negative = value < BigInt(0);
+  const absolute = negative ? -value : value;
+  const units = absolute / BigInt(100);
+  const cents = (absolute % BigInt(100)).toString().padStart(2, "0");
+  const grouped = units.toString().replace(/\B(?=(\d{3})+(?!\d))/g, " ");
+  const suffix = currency === "AOA" ? "Kz" : currency;
+  return `${negative ? "-" : ""}${grouped},${cents} ${suffix}`;
 }

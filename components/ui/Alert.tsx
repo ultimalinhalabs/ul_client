@@ -1,4 +1,4 @@
-import { getErrorDetail, getErrorReference, isForbidden, toHumanMessage } from "@/lib/api/errors";
+import { getErrorDetail, getErrorReference, isForbidden, isKnownErrorCode, toHumanMessage } from "@/lib/api/errors";
 import { cn } from "@/lib/utils/cn";
 import { AlertTriangle, CheckCircle2, Info, ShieldAlert, XCircle } from "lucide-react";
 import type { ReactNode } from "react";
@@ -64,7 +64,8 @@ export function Alert({
  * rather than a generic failure.
  */
 export function ErrorAlert({ title, error, action, className }: { title: string; error: unknown; action?: ReactNode; className?: string }) {
-  const forbidden = isForbidden(error);
+  // A specific backend state (suspended organization, no application access…) keeps the caller's own title; only a bare 403 becomes "Sem permissão".
+  const forbidden = isForbidden(error) && !isKnownErrorCode(error);
   return (
     <Alert
       tone={forbidden ? "forbidden" : "error"}

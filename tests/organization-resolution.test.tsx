@@ -17,8 +17,24 @@ vi.mock("@/lib/supabase/client", () => ({
 }));
 
 const MEMBERSHIPS: Membership[] = [
-  { membershipId: "m1", organizationId: "org-a", organizationName: "Org A", roleKey: "OWNER", status: "active" },
-  { membershipId: "m2", organizationId: "org-b", organizationName: "Org B", roleKey: "STAFF", status: "active" },
+  {
+    membershipId: "m1",
+    organizationId: "org-a",
+    organizationName: "Org A",
+    roleKey: "OWNER",
+    status: "active",
+    organization: { id: "org-a", name: "Org A", slug: "org-a", status: "active" },
+    applications: [],
+  },
+  {
+    membershipId: "m2",
+    organizationId: "org-b",
+    organizationName: "Org B",
+    roleKey: "STAFF",
+    status: "active",
+    organization: { id: "org-b", name: "Org B", slug: "org-b", status: "active" },
+    applications: [],
+  },
 ];
 
 /**
