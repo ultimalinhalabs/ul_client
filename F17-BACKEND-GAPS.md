@@ -24,6 +24,17 @@ Found while building the Client Console (F17) against ul-platform's real `/v1` A
 **Suggested implementation:** Add `url: webhookEndpoints.url` to the `MetadataRow` select clauses in `listWebhookEndpointsForOrganization` and `getWebhookEndpointDetail`, and to `shapeMetadata()`'s return object.
 **Classification:** **NECESSARY**. The Client Console's Webhooks page (`app/app/o/[organizationId]/webhooks/WebhooksClient.tsx`) lists application/status/event types/actions but cannot show the configured URL — this is a real, visible gap in the UI, not a cosmetic choice.
 
+## Gap 3 — Creating an organization is not idempotent and does not require a verified email (Block 2C, 2026-10-13)
+
+**Endpoint:** `POST /v1/organizations`
+**Reason:** The no-organization onboarding (`components/organization/CreateOrganizationForm.tsx`) lets a signed-in person create their first organization; a retried request must never create a second one, and an account whose email nobody confirmed should not be able to create tenants.
+**Current state:** `ul-platform/src/routes/v1/organizations.ts` accepts any authenticated user (`authenticate` only) and `createOrganization()` inserts a new organization + OWNER membership on every call — no `Idempotency-Key`, no uniqueness on name, no per-user limit, no `emailVerified` check (unlike proposal acceptance, which requires a verified email). The OWNER role and the id are decided by the server (correct).
+**Required behavior:** (a) accept an `Idempotency-Key` header and replay the first result for the same user + key (same pattern as `POST /v1/proposals/:id/acceptance`); (b) refuse with 403 when the caller's email is not verified (`isEmailVerified()` already exists in `src/modules/users/service.ts`); (c) optionally a per-user cap on organizations without any contract, against signup abuse (Phase 6 audit, risk 6).
+**Permission:** unchanged — platform-level, any authenticated, verified user.
+**Security consideration:** without (a) a lost response can leave duplicate empty organizations; without (b)/(c) open signup can mass-create tenants. Neither grants product access (application access still requires a UL-activated contract).
+**Workaround in this app (not a substitute):** one request in flight, no form after success, and after a network/5xx failure `/v1/me` is re-read before any retry is offered; creation is shown only when `/v1/me.emailVerified` is true. The Idempotency-Key header would also need adding to the API's CORS `allowedHeaders` (or the call moved to a Server Action, as acceptance does).
+**Classification:** **NECESSARY** — not a blocker for review; recommended before opening signup widely.
+
 ## Not a gap — confirmed working as the brief assumed
 
 - `GET /v1/organizations/:organizationId/applications` — exists (defined in `subscriptions.ts`, not a separate module), gated by `subscription.read`, derived from non-canceled subscriptions.

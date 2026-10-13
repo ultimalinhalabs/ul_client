@@ -5,6 +5,7 @@ import { PageState } from "@/components/ui/PageState";
 import { ApiError, toHumanMessage } from "@/lib/api/errors";
 import { getMe } from "@/lib/api/me";
 import type { Me } from "@/lib/api/types";
+import { resolveAppEntry } from "@/lib/organization/onboarding";
 import { getServerSession } from "@/lib/supabase/server";
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
@@ -30,13 +31,11 @@ export default async function AppEntryPage() {
     );
   }
 
-  if (me.memberships.length === 0) {
-    return <NoOrganizationState email={session.user.email ?? session.user.id} />;
+  const entry = resolveAppEntry(me);
+  if (entry.kind === "onboarding") {
+    return <NoOrganizationState email={session.user.email ?? me.email ?? me.userId} userId={me.userId} emailVerified={me.emailVerified} />;
   }
-
-  if (me.memberships.length === 1) {
-    redirect(`/app/o/${me.memberships[0].organizationId}/dashboard`);
-  }
+  if (entry.kind === "redirect") redirect(entry.to);
 
   return <OrganizationPicker memberships={me.memberships} />;
 }
