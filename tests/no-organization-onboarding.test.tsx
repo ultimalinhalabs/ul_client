@@ -5,7 +5,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { NoOrganizationState } from "@/components/organization/NoOrganizationState";
 import { ApiError } from "@/lib/api/errors";
 import type { Membership } from "@/lib/api/types";
-import { isAmbiguousCreateFailure, resolveAppEntry, validateOrganizationName } from "@/lib/organization/onboarding";
+import { IDEMPOTENCY_KEY_PATTERN } from "@/lib/commercial/acceptance";
+import { creationKeyFor, isAmbiguousCreateFailure, newOrganizationCreationKey, resolveAppEntry, validateOrganizationName } from "@/lib/organization/onboarding";
 
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
@@ -40,7 +41,7 @@ function json(status: number, body: unknown, requestId = "req_test") {
   return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json", "x-request-id": requestId } });
 }
 
-type Call = { url: string; method: string; body: unknown; authorization: string | null };
+type Call = { url: string; method: string; body: unknown; authorization: string | null; idempotencyKey: string | null };
 let calls: Call[];
 let routes: Record<string, (() => Response | Promise<Response>)[]>;
 
@@ -53,7 +54,13 @@ function mockApi(queue: Record<string, (() => Response | Promise<Response>)[]>) 
       const method = init.method ?? "GET";
       const path = input.replace(API, "");
       const headers = new Headers(init.headers);
-      calls.push({ url: path, method, body: init.body ? JSON.parse(String(init.body)) : undefined, authorization: headers.get("authorization") });
+      calls.push({
+        url: path,
+        method,
+        body: init.body ? JSON.parse(String(init.body)) : undefined,
+        authorization: headers.get("authorization"),
+        idempotencyKey: headers.get("idempotency-key"),
+      });
       const next = routes[`${method} ${path}`]?.shift();
       if (!next) throw new Error(`Unexpected request ${method} ${path}`);
       return next();
@@ -141,7 +148,9 @@ describe("NoOrganizationState onboarding (Block 2C)", () => {
     await submitName("  Padaria Exemplo ");
 
     await waitFor(() => expect(push).toHaveBeenCalledWith("/app/o/org-new/dashboard"));
-    expect(calls).toEqual([{ url: "/organizations", method: "POST", body: { name: "Padaria Exemplo" }, authorization: "Bearer user-access-token" }]);
+    expect(calls).toEqual([
+      { url: "/organizations", method: "POST", body: { name: "Padaria Exemplo" }, authorization: "Bearer user-access-token", idempotencyKey: expect.stringMatching(IDEMPOTENCY_KEY_PATTERN) },
+    ]);
     expect(Object.keys(calls[0].body as object)).toEqual(["name"]);
     expect(screen.getByText("Organização “Padaria Exemplo” criada")).toBeInTheDocument();
     expect(screen.getByText(/É o proprietário \(OWNER\)/)).toBeInTheDocument();
@@ -212,6 +221,75 @@ describe("NoOrganizationState onboarding (Block 2C)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Criar organização" }));
     await waitFor(() => expect(push).toHaveBeenCalledWith("/app/o/org-new/dashboard"));
     expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual(["POST /organizations", "GET /me", "POST /organizations"]);
+    const posts = calls.filter((c) => c.method === "POST");
+    expect(posts[1].idempotencyKey).toBe(posts[0].idempotencyKey);
+  });
+
+  it("a retry of the same name reuses its Idempotency-Key, so a committed-but-lost first request is replayed (200), not duplicated", async () => {
+    mockApi({
+      "POST /organizations": [
+        () => Promise.reject(new TypeError("Failed to fetch")),
+        () => json(200, { data: { id: "org-new", name: "Padaria Exemplo" } }),
+      ],
+      // The re-read raced the commit: no membership visible yet, so a retry is offered.
+      "GET /me": [() => json(200, { data: { userId: USER_ID, email: "nova@empresa.ao", emailVerified: true, status: "active", memberships: [] } })],
+    });
+    renderOnboarding();
+    await submitName("Padaria Exemplo");
+    expect(await screen.findByText("Não foi possível criar a organização")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Criar organização" }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/app/o/org-new/dashboard"));
+    const posts = calls.filter((c) => c.method === "POST");
+    expect(posts).toHaveLength(2);
+    expect(posts[1].idempotencyKey).toBe(posts[0].idempotencyKey);
+  });
+
+  it("editing the name after a failure starts a new request with a new Idempotency-Key", async () => {
+    mockApi({
+      "POST /organizations": [
+        () => json(500, { error: { code: "INTERNAL_ERROR", message: "boom" } }),
+        () => json(201, { data: { id: "org-new", name: "Padaria Nova" } }),
+      ],
+      "GET /me": [() => json(200, { data: { userId: USER_ID, email: "nova@empresa.ao", emailVerified: true, status: "active", memberships: [] } })],
+    });
+    renderOnboarding();
+    await submitName("Padaria Exemplo");
+    expect(await screen.findByText("Não foi possível criar a organização")).toBeInTheDocument();
+    const input = screen.getByLabelText(/Nome da organização/);
+    await userEvent.clear(input);
+    await submitName("Padaria Nova");
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/app/o/org-new/dashboard"));
+    const posts = calls.filter((c) => c.method === "POST");
+    expect(posts.map((c) => c.body)).toEqual([{ name: "Padaria Exemplo" }, { name: "Padaria Nova" }]);
+    expect(posts[1].idempotencyKey).not.toBe(posts[0].idempotencyKey);
+    expect(posts[1].idempotencyKey).toMatch(IDEMPOTENCY_KEY_PATTERN);
+  });
+
+  it("explains 403 EMAIL_NOT_VERIFIED from the server and links to the confirmation — no retry, no navigation", async () => {
+    mockApi({ "POST /organizations": [() => json(403, { error: { code: "EMAIL_NOT_VERIFIED", message: "A verified email address is required" } })] });
+    renderOnboarding();
+    await submitName("Padaria Exemplo");
+    expect(await screen.findByText(/Confirme primeiro o seu email. Só uma conta com o email confirmado/)).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Reenviar confirmação" })).toHaveAttribute("href", "/verify-email");
+    expect(screen.queryByText("A verified email address is required")).not.toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+    expect(calls).toHaveLength(1);
+  });
+
+  it("explains the per-user limits (429) in plain words", async () => {
+    mockApi({
+      "POST /organizations": [
+        () => json(429, { error: { code: "ORGANIZATION_CREATION_LIMIT", message: "Too many organizations created recently" } }),
+        () => json(429, { error: { code: "RATE_LIMITED", message: "Too many requests" } }),
+      ],
+    });
+    renderOnboarding();
+    await submitName("Padaria Exemplo");
+    expect(await screen.findByText(/Atingiu o número máximo de organizações que pode criar em 24 horas/)).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Criar organização" }));
+    expect(await screen.findByText(/Demasiados pedidos seguidos/)).toBeInTheDocument();
+    expect(push).not.toHaveBeenCalled();
+    expect(screen.queryByRole("link", { name: "Reenviar confirmação" })).not.toBeInTheDocument();
   });
 
   it("when the server refuses the creation (403), explains it and does not go anywhere", async () => {
@@ -257,5 +335,21 @@ describe("NoOrganizationState onboarding (Block 2C)", () => {
     expect(screen.getByRole("link", { name: "Reenviar confirmação" })).toHaveAttribute("href", "/verify-email");
     // Joining an existing organization does not depend on it.
     expect(screen.getByText(USER_ID)).toBeInTheDocument();
+  });
+});
+
+describe("organization creation Idempotency-Key (Block 2C, ul-platform fix/organization-creation-hardening)", () => {
+  it("generates keys in ul-platform's idempotencyKeySchema format, unique per call", () => {
+    const a = newOrganizationCreationKey();
+    expect(a).toMatch(IDEMPOTENCY_KEY_PATTERN);
+    expect(newOrganizationCreationKey()).not.toBe(a);
+  });
+
+  it("keeps the key for the same name and renews it for another", () => {
+    const first = creationKeyFor(null, "Padaria");
+    expect(creationKeyFor(first, "Padaria")).toBe(first);
+    const other = creationKeyFor(first, "Oficina");
+    expect(other.name).toBe("Oficina");
+    expect(other.key).not.toBe(first.key);
   });
 });

@@ -15,6 +15,20 @@ export function resolveAppEntry(me: Pick<Me, "memberships">): AppEntry {
   return { kind: "picker" };
 }
 
+/**
+ * One Idempotency-Key per name attempt, kept while the form is mounted: a
+ * retry of the same name replays the SAME key; editing the name starts a new
+ * request with a new key (the old key with another name would be a 409).
+ * Format per ul-platform's idempotencyKeySchema: 8–200 of [A-Za-z0-9._:-].
+ */
+export function newOrganizationCreationKey(): string {
+  return `org-${crypto.randomUUID()}`;
+}
+
+export function creationKeyFor(previous: { name: string; key: string } | null, name: string): { name: string; key: string } {
+  return previous && previous.name === name ? previous : { name, key: newOrganizationCreationKey() };
+}
+
 /** ul-platform createOrganizationSchema: `name` is 1–200 characters (src/modules/organizations/schemas.ts). */
 export const ORGANIZATION_NAME_MAX = 200;
 
@@ -28,9 +42,9 @@ export function validateOrganizationName(raw: string): { ok: true; name: string 
 /**
  * True when a failed POST /v1/organizations may still have created the
  * organization: the request never got an answer (network) or the server
- * failed after it may have committed (5xx). The endpoint has no
- * Idempotency-Key, so the only safe next step is to re-read /v1/me before
- * offering a retry — never to resend blindly.
+ * failed after it may have committed (5xx). /v1/me is re-read before a retry
+ * is offered, and the retry reuses the same Idempotency-Key — so even if the
+ * first request did commit, the server replays it instead of creating a second.
  */
 export function isAmbiguousCreateFailure(error: unknown): boolean {
   return error instanceof ApiError && (error.status === 0 || error.status >= 500);

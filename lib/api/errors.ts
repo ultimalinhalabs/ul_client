@@ -43,6 +43,10 @@ const KNOWN_CODE_MESSAGES: Record<string, string> = {
   SUBSCRIPTION_CONTRACT_MANAGED:
     "Esta subscrição faz parte de um contrato e só pode ser alterada pela Última Linha. Contacte a equipa comercial.",
   COMMERCIAL_RECORD_IMMUTABLE: "Este documento comercial já foi emitido e não pode ser alterado.",
+  EMAIL_NOT_VERIFIED: "Confirme primeiro o seu email. Só uma conta com o email confirmado pode criar uma organização.",
+  ORGANIZATION_CREATION_LIMIT:
+    "Atingiu o número máximo de organizações que pode criar em 24 horas. Tente novamente mais tarde ou contacte a Última Linha.",
+  RATE_LIMITED: "Demasiados pedidos seguidos. Aguarde alguns minutos e tente novamente.",
 };
 
 /** True when the code is one of the specific states above — their Portuguese sentence is complete, so the English backend detail is not shown. */

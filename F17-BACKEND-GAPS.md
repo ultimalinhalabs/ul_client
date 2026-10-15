@@ -35,6 +35,8 @@ Found while building the Client Console (F17) against ul-platform's real `/v1` A
 **Workaround in this app (not a substitute):** one request in flight, no form after success, and after a network/5xx failure `/v1/me` is re-read before any retry is offered; creation is shown only when `/v1/me.emailVerified` is true. The Idempotency-Key header would also need adding to the API's CORS `allowedHeaders` (or the call moved to a Server Action, as acceptance does).
 **Classification:** **NECESSARY** — not a blocker for review; recommended before opening signup widely.
 
+**Status (2026-10-15): RESOLVED in ul-platform branch `fix/organization-creation-hardening` (not yet deployed).** (a) `Idempotency-Key` required, replay per user + key, 409 on a different body; (b) 403 `EMAIL_NOT_VERIFIED`; (c) per-user rolling window, default 10 organizations / 24 h (429 `ORGANIZATION_CREATION_LIMIT`) plus a burst limit (429 `RATE_LIMITED`); `Idempotency-Key` added to the CORS allow-list. This app now sends a key per name attempt and explains both 403/429 codes. **Deploy order:** ul-platform first — until then the production API's CORS rejects the header and creation from this form fails.
+
 ## Not a gap — confirmed working as the brief assumed
 
 - `GET /v1/organizations/:organizationId/applications` — exists (defined in `subscriptions.ts`, not a separate module), gated by `subscription.read`, derived from non-canceled subscriptions.

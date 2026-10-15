@@ -183,8 +183,9 @@ behind that prefix.
 See `F17-BACKEND-GAPS.md` — currently three, all **NECESSARY** (not blockers): no email-based
 member invite flow (`POST .../memberships` requires an existing user's UUID), webhook
 endpoints' `url` is never returned by any GET (only visible in the create request you sent, not in
-any response), and `POST /v1/organizations` has no Idempotency-Key and no verified-email check
-(the onboarding guards against duplicates client-side). All are worked around honestly in the UI,
+any response), and `POST /v1/organizations` idempotency/verified-email (resolved in ul-platform
+`fix/organization-creation-hardening`, not yet deployed — the onboarding already sends the
+`Idempotency-Key`; deploy ul-platform first). All are worked around honestly in the UI,
 not faked.
 
 <!-- BEGIN:nextjs-agent-rules -->

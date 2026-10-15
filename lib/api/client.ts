@@ -19,9 +19,9 @@ export interface ApiRequestOptions {
   accessToken: string | null;
   /**
    * Extra request headers for the few endpoints whose contract needs one —
-   * today only `Idempotency-Key` on proposal acceptance. Note ul-platform's
-   * CORS allow-list (Authorization, Content-Type, X-Request-ID) means such a
-   * call must run server-side (a Server Action), never from the browser.
+   * `Idempotency-Key` on proposal acceptance (a Server Action) and on
+   * organization creation (from the browser: ul-platform's CORS allow-list
+   * includes Idempotency-Key since fix/organization-creation-hardening).
    */
   headers?: Record<string, string>;
 }
