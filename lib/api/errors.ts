@@ -47,6 +47,8 @@ const KNOWN_CODE_MESSAGES: Record<string, string> = {
   ORGANIZATION_CREATION_LIMIT:
     "Atingiu o número máximo de organizações que pode criar em 24 horas. Tente novamente mais tarde ou contacte a Última Linha.",
   RATE_LIMITED: "Demasiados pedidos seguidos. Aguarde alguns minutos e tente novamente.",
+  LIMIT_EXCEEDED:
+    "A organização atingiu o número máximo de membros do seu plano. Suspenda ou remova um membro, ou contacte a Última Linha para mudar de plano.",
 };
 
 /** True when the code is one of the specific states above — their Portuguese sentence is complete, so the English backend detail is not shown. */

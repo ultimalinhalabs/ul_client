@@ -59,6 +59,7 @@ describe("Block 2B — backend states become actionable messages (never 'somethi
     ["PLAN_REQUIRES_CONTRACT", 403, /proposta da Última Linha/],
     ["APPLICATION_ACCESS_REQUIRED", 403, /contrato correspondente for ativado/],
     ["SUBSCRIPTION_CONTRACT_MANAGED", 409, /só pode ser alterada pela Última Linha/],
+    ["LIMIT_EXCEEDED", 409, /número máximo de membros do seu plano/],
   ])("%s", (code, status, pattern) => {
     const error = new ApiError(status as number, code as string, "English backend message");
     expect(toHumanMessage(error)).toMatch(pattern as RegExp);
