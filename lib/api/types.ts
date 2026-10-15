@@ -179,6 +179,8 @@ export interface ProposalItemView {
   /** "one_time" | "monthly" | "yearly" */
   billingPeriod: string;
   durationMonths: number | null;
+  /** ul-platform migration 0024 — a period in days (self-service packages: "30 dias", not a calendar month); never with durationMonths. */
+  durationDays?: number | null;
 }
 
 export interface ProposalOptionView {
@@ -289,6 +291,7 @@ export interface ContractItem {
   lineTotalMinor: string;
   billingPeriod: string;
   durationMonths: number | null;
+  durationDays?: number | null;
 }
 
 /** The frozen contract version (`ul.commercial.contract-version/1`) — only the parts this app reads. */
@@ -307,4 +310,6 @@ export interface ContractSnapshot {
 export interface ContractDetail extends ContractSummary {
   snapshot: ContractSnapshot | null;
   items: ContractItem[];
+  /** ul-platform migration 0023 — the payment condition as the client sees it (status only; never evidence or who confirmed). null = not confirmed yet. */
+  payment?: { status: "confirmed"; amountMinor: string; currency: string; confirmedAt: string } | null;
 }

@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { durationLabel } from "@/lib/labels";
 import { ApiError, getErrorDetail, toHumanMessage } from "@/lib/api/errors";
 import { acceptProposal, listMyProposals, resolvePublicProposal } from "@/lib/api/proposals";
 import type { ContractDetail, Me, Membership } from "@/lib/api/types";
@@ -187,6 +188,17 @@ describe("Block 2B — contract presentation", () => {
   });
   it("lists the applications a contract covers", () => {
     expect(contractApplications(contract)).toEqual([{ key: "NA_PISTA", name: "Na Pista", plan: "Business" }]);
+  });
+  it("a pending contract reads as waiting for payment until ul-platform confirms it, then as waiting for activation (migration 0023)", () => {
+    expect(contractStatusCopy("pending_activation").title).toBe("A aguardar pagamento");
+    expect(contractStatusCopy("pending_activation", true).title).toBe("Pagamento confirmado — a aguardar ativação");
+    expect(contractStatusCopy("active", true).title).toBe("Contrato ativo");
+  });
+  it("a period in days (self-service: 30 dias, not a calendar month) is shown as days", () => {
+    expect(durationLabel(null, 30)).toBe("30 dias");
+    expect(durationLabel(null, 1)).toBe("1 dia");
+    expect(durationLabel(3, null)).toBe("3 meses");
+    expect(durationLabel(null)).toBeNull();
   });
   it.each(["pending_activation", "active", "cancelled", "terminated", "expired", "suspended"])("has client copy for %s, with no client action", (status) => {
     const copy = contractStatusCopy(status);

@@ -30,7 +30,7 @@ export function ProposalLineItems({
             itemKindLabel(item.kind),
             item.application && item.plan ? `${item.application.name} · ${item.plan.name}` : item.application?.name,
             billingPeriodLabel(item.billingPeriod),
-            durationLabel(item.durationMonths),
+            durationLabel(item.durationMonths, item.durationDays),
           ].filter(Boolean);
           return (
             <li key={`${item.title}-${index}`} className="flex flex-col gap-2 py-4 sm:flex-row sm:items-start sm:justify-between sm:gap-8">

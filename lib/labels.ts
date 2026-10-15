@@ -48,7 +48,8 @@ export function itemKindLabel(kind: string): string {
 }
 
 /** "12 meses", "1 mês"; null when the item has no fixed duration. */
-export function durationLabel(months: number | null): string | null {
+export function durationLabel(months: number | null, days?: number | null): string | null {
+  if (days != null) return days === 1 ? "1 dia" : `${days} dias`;
   if (months === null) return null;
   return months === 1 ? "1 mês" : `${months} meses`;
 }

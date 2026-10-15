@@ -8,8 +8,13 @@ import type { ContractDetail, ProposalItemView } from "@/lib/api/types";
  */
 const STATUS_COPY: Record<string, { title: string; body: string }> = {
   pending_activation: {
-    title: "A aguardar ativação",
-    body: "O contrato foi criado com a sua aceitação. A Última Linha ativa-o e, a partir desse momento, o acesso às aplicações contratadas fica disponível.",
+    title: "A aguardar pagamento",
+    body: "O contrato foi criado com a sua aceitação. O acesso às aplicações contratadas só é ativado depois de o pagamento ser confirmado.",
+  },
+  // Not a ul-platform status: pending_activation with the payment already confirmed (see contractStatusCopy).
+  pending_activation_paid: {
+    title: "Pagamento confirmado — a aguardar ativação",
+    body: "O pagamento foi confirmado. A ativação é feita pela Última Linha assim que todas as condições do contrato estiverem cumpridas.",
   },
   active: {
     title: "Contrato ativo",
@@ -21,8 +26,13 @@ const STATUS_COPY: Record<string, { title: string; body: string }> = {
   expired: { title: "Contrato expirado", body: "O período deste contrato terminou." },
 };
 
-export function contractStatusCopy(status: string): { title: string; body: string } {
-  return STATUS_COPY[status] ?? { title: status, body: "Contacte a Última Linha para mais informação sobre este contrato." };
+/**
+ * ul-platform (migration 0023) never activates a contract without a confirmed payment, so a pending contract
+ * reads differently before and after the payment is confirmed. The client never confirms a payment here.
+ */
+export function contractStatusCopy(status: string, paymentConfirmed = false): { title: string; body: string } {
+  const key = status === "pending_activation" && paymentConfirmed ? "pending_activation_paid" : status;
+  return STATUS_COPY[key] ?? { title: status, body: "Contacte a Última Linha para mais informação sobre este contrato." };
 }
 
 /**
@@ -49,6 +59,7 @@ export function contractLineItems(contract: ContractDetail): ProposalItemView[] 
         lineTotalMinor: item.lineTotalMinor,
         billingPeriod: item.billingPeriod,
         durationMonths: item.durationMonths,
+        durationDays: item.durationDays ?? null,
       };
     });
 }

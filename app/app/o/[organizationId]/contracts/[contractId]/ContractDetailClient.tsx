@@ -48,7 +48,7 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
 
   const contract = query.data;
   const snapshot = contract.snapshot;
-  const status = contractStatusCopy(contract.status);
+  const status = contractStatusCopy(contract.status, !!contract.payment);
   const accessKeys = new Set(membership.applications.map((application) => application.key));
   const applications = contractApplications(contract);
 
@@ -91,6 +91,7 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
             { label: "Aceite em", value: snapshot ? formatLongDate(snapshot.source.acceptedAt) : "—" },
             { label: "Início", value: contract.startsAt ? formatLongDate(contract.startsAt) : "Na ativação" },
             { label: "Fim", value: contract.endsAt ? formatLongDate(contract.endsAt) : "—" },
+            { label: "Pagamento", value: contract.payment ? `Confirmado em ${formatLongDate(contract.payment.confirmedAt)}` : "Pendente" },
           ]}
         />
       </Panel>
