@@ -7,6 +7,7 @@ import {
   LayoutDashboard,
   type LucideIcon,
   Settings,
+  ShoppingBag,
   SlidersHorizontal,
   Users,
   Webhook,
@@ -51,6 +52,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     label: "Plano",
     items: [
+      { segment: "catalog", label: "Contratar plano", icon: ShoppingBag, keywords: "catalogo planos pacotes contratar comprar self-service precos" },
       { segment: "contracts", label: "Contratos", icon: FileSignature, keywords: "contracts contratos propostas comercial" },
       { segment: "applications", label: "Aplicações", icon: Blocks, keywords: "applications produtos acesso" },
       { segment: "subscriptions", label: "Subscrições", icon: CreditCard, keywords: "subscriptions assinaturas planos" },

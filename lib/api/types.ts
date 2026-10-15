@@ -313,3 +313,37 @@ export interface ContractDetail extends ContractSummary {
   /** ul-platform migration 0023 — the payment condition as the client sees it (status only; never evidence or who confirmed). null = not confirmed yet. */
   payment?: { status: "confirmed"; amountMinor: string; currency: string; confirmedAt: string } | null;
 }
+
+/**
+ * GET /v1/catalog/self-service — ul-platform migration 0024 (selfService.service.ts catalogEntry). Price,
+ * period, entitlements and terms are exactly what UL configured; this app never computes or edits them.
+ */
+export interface CatalogPlan {
+  applicationKey: string;
+  applicationName: string;
+  planKey: string;
+  name: string;
+  description: string | null;
+  priceMinor: string;
+  currency: string;
+  periodDays: number;
+  /** Always true: no package is activated without a confirmed payment. */
+  paymentRequired: true;
+  entitlements: { key: string; value: unknown }[];
+  terms: { id: string; key: string; version: number; title: string; status: string; bodySha256: string } | null;
+  /** false while the plan's terms are not approved (or the plan/application is inactive). */
+  contractable: boolean;
+}
+
+/** POST /v1/organizations/:id/self-service/contracts — 201 new, 200 replay of the same Idempotency-Key. */
+export interface SelfServiceOffer {
+  proposalId: string;
+  versionId: string;
+  optionId: string;
+  contentSha256: string;
+  priceMinor: string;
+  currency: string;
+  periodDays: number;
+  validUntil: string;
+  replayed: boolean;
+}
