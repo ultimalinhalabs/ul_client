@@ -13,6 +13,8 @@ Found while building the Client Console (F17) against ul-platform's real `/v1` A
 **Suggested implementation:** New `invitations` table (organizationId, email, roleKey, status, invitedByUserId, token) + `POST/GET/DELETE /v1/organizations/:id/invitations` + an acceptance endpoint that creates the real Membership once the invited email's Supabase account exists.
 **Classification:** **NECESSARY** — not a blocker. The Client Console's Add Member dialog (`app/app/o/[organizationId]/members/AddMemberDialog.tsx`) is built honestly against the real contract: it asks for a Supabase user id directly and explains why, rather than pretending an email field would work.
 
+**Status (2026-10-15): RESOLVED in ul-platform branch `feature/team-invitations` (migration 0025, not yet deployed).** Design (b): `POST/GET /v1/organizations/:id/invitations`, `.../:invitationId/revoke`, `GET /v1/me/invitations`, `POST /v1/me/invitations/:id/accept|decline`. Bound to the invited, verified email; no lookup; no token; pending invitations count against the plan's `members.max`. This app now invites by email (`InviteMemberDialog`, `PendingInvitations`) and the invitee accepts at `/app/invitations` or on the onboarding. ul-platform sends no email: the inviter tells the person where to accept.
+
 ## Gap 2 — Webhook endpoint URL is never returned by the API
 
 **Endpoints:** `GET /v1/organizations/:organizationId/webhooks`, `GET /v1/organizations/:organizationId/webhooks/:webhookId`

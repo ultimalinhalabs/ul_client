@@ -347,3 +347,30 @@ export interface SelfServiceOffer {
   validUntil: string;
   replayed: boolean;
 }
+
+/** ul-platform migration 0025 — GET/POST /v1/organizations/:id/invitations (invitations.service.ts invitationDto). */
+export interface OrganizationInvitation {
+  id: string;
+  organizationId: string;
+  email: string;
+  roleKey: string;
+  /** A pending invitation past its expiry is already reported as "expired". */
+  status: "pending" | "accepted" | "declined" | "revoked" | "expired";
+  invitedByUserId: string | null;
+  expiresAt: string;
+  respondedAt: string | null;
+  revokedAt: string | null;
+  createdAt: string;
+}
+
+/** GET /v1/me/invitations — only invitations addressed to the caller's VERIFIED email. */
+export interface MyInvitations {
+  emailVerified: boolean;
+  invitations: {
+    id: string;
+    organization: { id: string; name: string; status: string };
+    roleKey: string;
+    expiresAt: string;
+    createdAt: string;
+  }[];
+}

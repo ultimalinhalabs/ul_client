@@ -19,7 +19,8 @@ import { useToastStore } from "@/lib/store/toastStore";
 import { formatDate, toIsoString } from "@/lib/utils/format";
 import { Plus } from "lucide-react";
 import { useState } from "react";
-import { AddMemberDialog } from "./AddMemberDialog";
+import { InviteMemberDialog } from "./InviteMemberDialog";
+import { PendingInvitations } from "./PendingInvitations";
 
 type MembershipStatus = "active" | "invited" | "suspended";
 
@@ -164,7 +165,7 @@ export function MembersClient() {
           <PermissionGate permission="membership.create" permissions={permissions}>
             <Button onClick={() => setAddOpen(true)}>
               <Plus aria-hidden />
-              Adicionar membro
+              Convidar membro
             </Button>
           </PermissionGate>
         }
@@ -181,7 +182,9 @@ export function MembersClient() {
           <DataTable caption="Membros da organização" columns={columns} rows={membersQuery.data} getRowKey={(row) => row.membershipId} />
         ))}
 
-      <AddMemberDialog open={addOpen} onClose={() => setAddOpen(false)} organizationId={organizationId} />
+      <PendingInvitations organizationId={organizationId} canInvite={permissions.includes("membership.create")} />
+
+      <InviteMemberDialog open={addOpen} onClose={() => setAddOpen(false)} organizationId={organizationId} />
 
       <ConfirmDialog
         open={Boolean(pendingStatus)}
@@ -210,7 +213,7 @@ export function MembersClient() {
             organização e deixa de aparecer nesta lista.
           </>
         }
-        reversibility="Para voltar a dar acesso, terá de adicioná-lo novamente como membro."
+        reversibility="Para voltar a dar acesso, terá de enviar um novo convite."
         confirmLabel="Remover membro"
         loading={removeMembership.isPending}
       />

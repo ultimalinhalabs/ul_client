@@ -2,10 +2,9 @@
 
 import { AccountShell } from "@/components/layout/AccountShell";
 import { CreateOrganizationForm } from "@/components/organization/CreateOrganizationForm";
+import { InvitationsInbox } from "@/components/organization/InvitationsInbox";
 import { Alert } from "@/components/ui/Alert";
 import { buttonClasses } from "@/components/ui/Button";
-import { Code } from "@/components/ui/Code";
-import { CopyButton } from "@/components/ui/CopyButton";
 import { Panel } from "@/components/ui/Panel";
 import Link from "next/link";
 
@@ -29,7 +28,7 @@ const UL_CONTACT_EMAIL = "contacto@ultimalinha.ao";
  * Creation is offered only to a verified email (the server does not enforce
  * this yet — a UX rule, not the security boundary).
  */
-export function NoOrganizationState({ email, userId, emailVerified }: { email: string; userId: string; emailVerified: boolean }) {
+export function NoOrganizationState({ email, emailVerified }: { email: string; userId?: string; emailVerified: boolean }) {
   return (
     <AccountShell email={email}>
       <div className="flex flex-col gap-8">
@@ -67,20 +66,14 @@ export function NoOrganizationState({ email, userId, emailVerified }: { email: s
               </Alert>
             )}
             <p className="text-label text-fg-subtle">
-              Criar a organização não ativa aplicações. O acesso à Na Pista e às restantes aplicações da Última Linha é ativado
-              pela Última Linha, depois de uma proposta aceite e do respetivo contrato.
+              Criar a organização não ativa aplicações. O acesso à Na Pista e às restantes aplicações da Última Linha só é ativado
+              depois de um contrato aceite e do pagamento confirmado.
             </p>
           </div>
         </Panel>
 
-        <Panel title="Entrar numa organização que já existe" description="O proprietário dessa organização adiciona-o na página Membros.">
-          <div className="flex flex-col gap-3">
-            <p className="text-body text-fg-muted">Envie-lhe o seu ID de utilizador:</p>
-            <div className="flex flex-wrap items-center gap-3">
-              <Code className="rounded-md border border-border bg-inset px-2 py-1">{userId}</Code>
-              <CopyButton value={userId} label="Copiar ID" />
-            </div>
-          </div>
+        <Panel title="Foi convidado para uma organização?" description="O proprietário convida o seu email na página Membros; o convite aparece aqui.">
+          <InvitationsInbox email={email} />
         </Panel>
 
         <p className="text-label text-fg-subtle">

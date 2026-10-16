@@ -44,6 +44,7 @@ function json(status: number, body: unknown, requestId = "req_test") {
 type Call = { url: string; method: string; body: unknown; authorization: string | null; idempotencyKey: string | null };
 let calls: Call[];
 let routes: Record<string, (() => Response | Promise<Response>)[]>;
+let myInvitations: unknown;
 
 /** Answers each `METHOD /path` with the next queued response; records every request. */
 function mockApi(queue: Record<string, (() => Response | Promise<Response>)[]>) {
@@ -53,6 +54,7 @@ function mockApi(queue: Record<string, (() => Response | Promise<Response>)[]>) 
     vi.fn(async (input: string, init: RequestInit = {}) => {
       const method = init.method ?? "GET";
       const path = input.replace(API, "");
+      if (method === "GET" && path === "/me/invitations" && !routes["GET /me/invitations"]) return json(200, { data: myInvitations });
       const headers = new Headers(init.headers);
       calls.push({
         url: path,
@@ -84,6 +86,7 @@ async function submitName(name: string) {
 
 beforeEach(() => {
   calls = [];
+  myInvitations = { emailVerified: true, invitations: [] };
   push.mockClear();
 });
 
@@ -134,7 +137,8 @@ describe("NoOrganizationState onboarding (Block 2C)", () => {
     expect(screen.getAllByText("nova@empresa.ao").length).toBeGreaterThan(0);
     expect(screen.getByRole("link", { name: "Ver as suas propostas" })).toHaveAttribute("href", "/app/proposals");
     expect(screen.getByRole("button", { name: "Criar organização" })).toBeInTheDocument();
-    expect(screen.getByText(USER_ID)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Foi convidado para uma organização?" })).toBeInTheDocument();
+    expect(screen.queryByText(USER_ID)).not.toBeInTheDocument(); // no more "send your user id" (F17 Gap 1 resolved)
     expect(screen.getByRole("link", { name: "contacto@ultimalinha.ao" })).toHaveAttribute("href", "mailto:contacto@ultimalinha.ao");
     expect(screen.getByText(/Criar a organização não ativa aplicações/)).toBeInTheDocument();
     expect(screen.queryByText(/administra|PLATFORM_ADMIN|plataforma admin/i)).not.toBeInTheDocument();
@@ -333,8 +337,32 @@ describe("NoOrganizationState onboarding (Block 2C)", () => {
     expect(screen.queryByRole("button", { name: "Criar organização" })).not.toBeInTheDocument();
     expect(screen.getByText("Confirme primeiro o seu email")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Reenviar confirmação" })).toHaveAttribute("href", "/verify-email");
-    // Joining an existing organization does not depend on it.
-    expect(screen.getByText(USER_ID)).toBeInTheDocument();
+  });
+
+  it("lists the invitations addressed to the verified email; accepting joins and opens the organization", async () => {
+    myInvitations = { emailVerified: true, invitations: [{ id: "inv-1", organization: { id: "org-x", name: "Mercearia Convidante", status: "active" }, roleKey: "STAFF", expiresAt: new Date(Date.now() + 86_400_000).toISOString(), createdAt: new Date().toISOString() }] };
+    mockApi({ "POST /me/invitations/inv-1/accept": [() => json(201, { data: { membershipId: "m-1", organizationId: "org-x", roleKey: "STAFF", created: true } })] });
+    renderOnboarding();
+    expect(await screen.findByText("Mercearia Convidante")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Aceitar convite" }));
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/app/o/org-x/dashboard"));
+    expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual(["POST /me/invitations/inv-1/accept"]);
+  });
+
+  it("declining ends the invitation without joining anything", async () => {
+    myInvitations = { emailVerified: true, invitations: [{ id: "inv-2", organization: { id: "org-y", name: "Oficina Convidante", status: "active" }, roleKey: "MANAGER", expiresAt: new Date(Date.now() + 86_400_000).toISOString(), createdAt: new Date().toISOString() }] };
+    mockApi({ "POST /me/invitations/inv-2/decline": [() => json(200, { data: { status: "declined" } })] });
+    renderOnboarding();
+    await userEvent.click(await screen.findByRole("button", { name: "Recusar" }));
+    await waitFor(() => expect(calls.map((c) => `${c.method} ${c.url}`)).toEqual(["POST /me/invitations/inv-2/decline"]));
+    expect(push).not.toHaveBeenCalled();
+  });
+
+  it("with an unconfirmed email, no invitation is shown and the person is pointed to the confirmation", async () => {
+    myInvitations = { emailVerified: false, invitations: [] };
+    mockApi({});
+    renderOnboarding({ emailVerified: false });
+    expect(await screen.findByText(/Os convites só aparecem depois de confirmar o email/)).toBeInTheDocument();
   });
 });
 

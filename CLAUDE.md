@@ -180,8 +180,9 @@ behind that prefix.
 
 ## 11. Known backend gaps
 
-See `F17-BACKEND-GAPS.md` — currently three, all **NECESSARY** (not blockers): no email-based
-member invite flow (`POST .../memberships` requires an existing user's UUID), webhook
+See `F17-BACKEND-GAPS.md` — three, all **NECESSARY** (not blockers): member invitations by email
+(resolved in ul-platform `feature/team-invitations`, migration 0025 — this app invites by email and the invitee
+accepts at `/app/invitations`), webhook
 endpoints' `url` is never returned by any GET (only visible in the create request you sent, not in
 any response), and `POST /v1/organizations` idempotency/verified-email (resolved in ul-platform
 `fix/organization-creation-hardening`, not yet deployed — the onboarding already sends the

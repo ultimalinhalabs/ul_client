@@ -47,6 +47,8 @@ const KNOWN_CODE_MESSAGES: Record<string, string> = {
   ORGANIZATION_CREATION_LIMIT:
     "Atingiu o número máximo de organizações que pode criar em 24 horas. Tente novamente mais tarde ou contacte a Última Linha.",
   RATE_LIMITED: "Demasiados pedidos seguidos. Aguarde alguns minutos e tente novamente.",
+  ALREADY_MEMBER: "Esta pessoa já é membro da organização.",
+  INVITATION_PENDING: "Já existe um convite pendente para este email. Pode revogá-lo e enviar outro.",
   TERMS_NOT_APPROVED: "Este plano ainda não pode ser contratado: os termos contratuais estão a aguardar aprovação.",
   SUBSCRIPTION_CONFLICT: "A organização já tem uma subscrição desta aplicação. Para mudar de plano, contacte a Última Linha.",
   PLAN_INACTIVE: "Este plano não está disponível neste momento.",

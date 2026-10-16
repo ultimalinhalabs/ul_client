@@ -4,6 +4,7 @@ import { organizationHref } from "@/components/layout/navigation";
 import { ErrorAlert } from "@/components/ui/Alert";
 import { buttonClasses } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PendingInvitationsNotice } from "@/components/organization/PendingInvitationsNotice";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { Skeleton } from "@/components/ui/Skeleton";
@@ -56,6 +57,7 @@ export function DashboardClient() {
   return (
     <div className="flex flex-col gap-8">
       <PageHeader title="Início" description={`Resumo de ${organizationName}.`} />
+      <PendingInvitationsNotice />
 
       <section aria-label="Resumo" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Stat label="Organização">{organizationName}</Stat>
