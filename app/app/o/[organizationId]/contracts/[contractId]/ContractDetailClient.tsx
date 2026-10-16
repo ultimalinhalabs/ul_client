@@ -5,12 +5,14 @@ import { ProposalLineItems } from "@/components/commercial/ProposalLineItems";
 import { RenewalSection } from "@/components/commercial/RenewalSection";
 import { TermsSection } from "@/components/commercial/TermsSection";
 import { ErrorAlert } from "@/components/ui/Alert";
+import { buttonClasses } from "@/components/ui/Button";
 import { DetailList } from "@/components/ui/DetailList";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useContract } from "@/hooks/useContracts";
+import { applicationUrl } from "@/lib/commercial/applicationLinks";
 import { contractApplications, contractLineItems, contractStatusCopy } from "@/lib/commercial/contracts";
 import { useActiveOrganization } from "@/lib/organization/ActiveOrganizationContext";
 import { cn } from "@/lib/utils/cn";
@@ -81,6 +83,11 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
                 {application.plan && <span className="text-fg-subtle">{application.plan}</span>}
                 <StatusBadge status={accessKeys.has(application.key) ? "active" : "inactive"} />
                 <span className="sr-only">{accessKeys.has(application.key) ? "acesso ativo" : "sem acesso ativo"}</span>
+                {accessKeys.has(application.key) && applicationUrl(application.key, organizationId) && (
+                  <a href={applicationUrl(application.key, organizationId)!} className={buttonClasses({ size: "sm" })}>
+                    Abrir {application.name}
+                  </a>
+                )}
               </li>
             ))}
           </ul>

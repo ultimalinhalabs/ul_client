@@ -11,6 +11,7 @@ import { StatusBadge } from "@/components/ui/StatusBadge";
 import { useApplications } from "@/hooks/useApplications";
 import { useOrganizationApplications } from "@/hooks/useOrganizationApplications";
 import { type ApplicationAccessRow, mergeApplicationAccess } from "@/lib/commercial/applicationAccess";
+import { applicationUrl } from "@/lib/commercial/applicationLinks";
 import { useActiveOrganization } from "@/lib/organization/ActiveOrganizationContext";
 import Link from "next/link";
 
@@ -36,6 +37,18 @@ export function ApplicationsClient() {
       header: "Subscrição",
       hideBelow: "md",
       cell: (row) => (row.subscriptionStatus ? <StatusBadge status={row.subscriptionStatus} /> : <span className="text-fg-subtle">—</span>),
+    },
+    {
+      header: "",
+      align: "right",
+      cell: (row) => {
+        const url = row.access ? applicationUrl(row.key, organizationId) : null;
+        return url ? (
+          <a href={url} className={buttonClasses({ size: "sm" })} aria-label={`Abrir ${row.name}`}>
+            Abrir {row.name}
+          </a>
+        ) : null;
+      },
     },
   ];
 
