@@ -52,6 +52,15 @@ const KNOWN_CODE_MESSAGES: Record<string, string> = {
   TERMS_NOT_APPROVED: "Este plano ainda não pode ser contratado: os termos contratuais estão a aguardar aprovação.",
   SUBSCRIPTION_CONFLICT: "A organização já tem uma subscrição desta aplicação. Para mudar de plano, contacte a Última Linha.",
   PLAN_INACTIVE: "Este plano não está disponível neste momento.",
+  // ul-platform 0026/0027 — payment proofs and renewal
+  NOTHING_TO_PAY: "Não há nenhum pagamento pendente para este contrato neste momento.",
+  PROOF_NOT_PDF: "O ficheiro não é um PDF. Envie o comprovativo em formato PDF.",
+  PROOF_TOO_LARGE: "O PDF é demasiado grande. O máximo é 4 MB.",
+  PAYLOAD_TOO_LARGE: "O ficheiro é demasiado grande. O máximo é 4 MB.",
+  TOO_MANY_PROOFS: "Já tem vários comprovativos à espera de verificação. Aguarde a resposta da Última Linha.",
+  CONSENT_OUTDATED: "As condições de renovação mudaram. Atualize a página e leia-as novamente.",
+  RENEWAL_ALREADY_AUTHORIZED: "A renovação deste contrato já está autorizada.",
+  RENEWAL_NOT_AVAILABLE: "Este contrato não pode ser renovado desta forma. Contacte a Última Linha.",
   LIMIT_EXCEEDED:
     "A organização atingiu o número máximo de membros do seu plano. Suspenda ou remova um membro, ou contacte a Última Linha para mudar de plano.",
 };

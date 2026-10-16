@@ -24,6 +24,8 @@ export interface ApiRequestOptions {
    * includes Idempotency-Key since fix/organization-creation-hardening).
    */
   headers?: Record<string, string>;
+  /** A raw (non-JSON) body — the PDF payment proof (ul-platform migration 0027). Never combined with `body`. */
+  rawBody?: { contentType: string; data: Blob };
 }
 
 /**
@@ -36,6 +38,7 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions): P
   const headers: Record<string, string> = { ...options.headers };
   if (options.accessToken) headers.Authorization = `Bearer ${options.accessToken}`;
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
+  if (options.rawBody) headers["Content-Type"] = options.rawBody.contentType;
 
   let response: Response;
   try {
@@ -44,7 +47,7 @@ export async function apiRequest<T>(path: string, options: ApiRequestOptions): P
       headers,
       // Tenant and identity data are never served from Next's data cache.
       cache: "no-store",
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      body: options.rawBody ? options.rawBody.data : options.body !== undefined ? JSON.stringify(options.body) : undefined,
     });
   } catch {
     throw new ApiError(0, "NETWORK_ERROR", "Could not reach the UL Platform API.");

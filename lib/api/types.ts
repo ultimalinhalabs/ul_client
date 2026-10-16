@@ -312,6 +312,75 @@ export interface ContractDetail extends ContractSummary {
   items: ContractItem[];
   /** ul-platform migration 0023 — the payment condition as the client sees it (status only; never evidence or who confirmed). null = not confirmed yet. */
   payment?: { status: "confirmed"; amountMinor: string; currency: string; confirmedAt: string } | null;
+  /** ul-platform migration 0026 (renewals.service.ts renewalState). */
+  renewal?: RenewalState;
+  /** ul-platform migration 0027 — the proofs this organization sent (client view: no internal actor ids). */
+  proofs?: PaymentProof[];
+}
+
+export interface RenewalAuthorization {
+  id: string;
+  contractId: string;
+  amountMinor: string;
+  currency: string;
+  periodDays: number;
+  consentText: string;
+  consentSha256: string;
+  authorizedAt: string;
+  withdrawnAt: string | null;
+}
+
+export interface ContractRenewal {
+  id: string;
+  contractId: string;
+  sequence: number;
+  /** Payment reference of this period, e.g. UL-C-2026-000123-R1. */
+  reference: string;
+  status: "awaiting_payment" | "active" | "cancelled" | "lapsed";
+  periodStartsAt: string;
+  periodEndsAt: string;
+  amountMinor: string;
+  currency: string;
+  appliedAt: string | null;
+  cancelledAt: string | null;
+  lapsedAt: string | null;
+  createdAt: string;
+}
+
+export interface RenewalState {
+  eligible: boolean;
+  ineligibleReason: string | null;
+  leadDays: number;
+  authorization: RenewalAuthorization | null;
+  /** Present when renewal can be authorized now: the exact text to show and its hash to send back. */
+  offer: { consentText: string; consentSha256: string; amountMinor: string; currency: string; periodDays: number; leadDays: number } | null;
+  renewals: ContractRenewal[];
+}
+
+export type PaymentProofMethod = "bank_transfer" | "multicaixa_express";
+
+export interface PaymentProof {
+  id: string;
+  contractId: string;
+  renewalId: string | null;
+  method: PaymentProofMethod;
+  declaredReference: string;
+  fileName: string;
+  sizeBytes: number;
+  status: "submitted" | "accepted" | "rejected";
+  rejectionReason: string | null;
+  reviewedAt: string | null;
+  createdAt: string;
+}
+
+/** GET /v1/organizations/:org/contracts/:id/payment-instructions — only the methods UL configured are present. */
+export interface PaymentInstructions {
+  target: { kind: "contract" | "renewal"; contractId: string; renewalId: string | null; reference: string; amountMinor: string; currency: string; dueAt: string | null };
+  methods: {
+    bankTransfer: { bankName: string | null; accountHolder: string | null; iban: string } | null;
+    multicaixaExpress: { number: string } | null;
+  };
+  proof: { required: true; contentType: "application/pdf"; maxBytes: number };
 }
 
 /**

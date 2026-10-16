@@ -1,6 +1,8 @@
 "use client";
 
+import { PaymentSection } from "@/components/commercial/PaymentSection";
 import { ProposalLineItems } from "@/components/commercial/ProposalLineItems";
+import { RenewalSection } from "@/components/commercial/RenewalSection";
 import { TermsSection } from "@/components/commercial/TermsSection";
 import { ErrorAlert } from "@/components/ui/Alert";
 import { DetailList } from "@/components/ui/DetailList";
@@ -17,9 +19,9 @@ import { formatLongDate } from "@/lib/utils/format";
 /**
  * Block 2B — one contract as a commercial document: its state and what
  * happens next, the parties, the accepted option with its items, the period,
- * and the terms exactly as frozen. Read-only by construction — there is no
- * action on this page; activation, cancellation and termination are UL
- * operations. The application access shown is the organization's CURRENT
+ * and the terms exactly as frozen. Activation, cancellation and termination
+ * are UL operations. The OWNER's only actions (ul-platform 0026/0027): send
+ * the payment proof (PDF) and authorize/withdraw renewal. The application access shown is the organization's CURRENT
  * effective access from GET /v1/me (the same source every product reads).
  */
 export function ContractDetailClient({ contractId }: { contractId: string }) {
@@ -51,6 +53,8 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
   const status = contractStatusCopy(contract.status, !!contract.payment);
   const accessKeys = new Set(membership.applications.map((application) => application.key));
   const applications = contractApplications(contract);
+  const firstPeriodPayable = contract.status === "pending_activation" && !contract.payment;
+  const awaitingRenewal = contract.status === "active" ? contract.renewal?.renewals.find((r) => r.status === "awaiting_payment") : undefined;
 
   return (
     <div className="flex flex-col gap-8">
@@ -82,6 +86,12 @@ export function ContractDetailClient({ contractId }: { contractId: string }) {
           </ul>
         )}
       </section>
+
+      {firstPeriodPayable && <PaymentSection organizationId={organizationId} contractId={contract.id} renewalId={null} proofs={contract.proofs ?? []} title="Pagamento" />}
+      {awaitingRenewal && (
+        <PaymentSection organizationId={organizationId} contractId={contract.id} renewalId={awaitingRenewal.id} proofs={contract.proofs ?? []} title="Pagamento da renovação" />
+      )}
+      {contract.renewal && <RenewalSection organizationId={organizationId} contractId={contract.id} renewal={contract.renewal} />}
 
       <Panel title="Resumo">
         <DetailList

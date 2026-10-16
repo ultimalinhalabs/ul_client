@@ -33,6 +33,11 @@ const STATUSES: Record<string, { label: string; dot: string }> = {
   // ul-platform 0025 — team invitations (pending/accepted/declined/revoked/expired).
   pending: { label: "Pendente", dot: "bg-warning" },
   declined: { label: "Recusado", dot: "bg-neutral" },
+  // ul-platform 0026/0027 — renewal periods and payment proofs.
+  awaiting_payment: { label: "A aguardar pagamento", dot: "bg-warning" },
+  lapsed: { label: "Caducada", dot: "bg-neutral" },
+  submitted: { label: "Em verificação", dot: "bg-info" },
+  rejected: { label: "Não aceite", dot: "bg-danger" },
 };
 
 export function statusLabel(status: string): string {

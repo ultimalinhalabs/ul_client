@@ -9,7 +9,7 @@ import type { ContractDetail, ProposalItemView } from "@/lib/api/types";
 const STATUS_COPY: Record<string, { title: string; body: string }> = {
   pending_activation: {
     title: "A aguardar pagamento",
-    body: "O contrato foi criado com a sua aceitação. O acesso às aplicações contratadas só é ativado depois de o pagamento ser confirmado.",
+    body: "O contrato foi criado com a sua aceitação. Pague por transferência (IBAN) ou Multicaixa Express e envie o comprovativo em PDF nesta página. O acesso só é ativado depois de a Última Linha confirmar o pagamento.",
   },
   // Not a ul-platform status: pending_activation with the payment already confirmed (see contractStatusCopy).
   pending_activation_paid: {
