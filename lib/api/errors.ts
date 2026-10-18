@@ -53,6 +53,7 @@ const KNOWN_CODE_MESSAGES: Record<string, string> = {
   SUBSCRIPTION_CONFLICT: "A organização já tem uma subscrição desta aplicação. Para mudar de plano, contacte a Última Linha.",
   PLAN_INACTIVE: "Este plano não está disponível neste momento.",
   // ul-platform 0026/0027 — payment proofs and renewal
+  CLIENT_LEGAL_DATA_REQUIRED: "Indique o NIF e a morada da sede do cliente para continuar.",
   NOTHING_TO_PAY: "Não há nenhum pagamento pendente para este contrato neste momento.",
   PROOF_NOT_PDF: "O ficheiro não é um PDF. Envie o comprovativo em formato PDF.",
   PROOF_TOO_LARGE: "O PDF é demasiado grande. O máximo é 4 MB.",

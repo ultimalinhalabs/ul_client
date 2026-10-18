@@ -57,6 +57,17 @@ function mockApi(routes: Record<string, (() => Response)[]>) {
     }),
   );
 }
+
+const CLIENT = { legalName: "Loja Teste, Lda", taxId: "5000000000", address: "Luanda, Maianga" };
+/** Legal answer 2.1: "Contratar" opens the client-data dialog; NIF and address are required before the request. */
+async function fillClientData(data: { legalName?: string; taxId: string; address: string } = CLIENT) {
+  const legal = await screen.findByLabelText(/Denominação legal/);
+  await userEvent.clear(legal);
+  if (data.legalName) await userEvent.type(legal, data.legalName);
+  if (data.taxId) await userEvent.type(screen.getByLabelText(/^NIF/), data.taxId);
+  if (data.address) await userEvent.type(screen.getByLabelText(/Morada da sede/), data.address);
+  await userEvent.click(screen.getByRole("button", { name: "Continuar para os termos" }));
+}
 function renderCatalog() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
   return render(
@@ -86,16 +97,17 @@ describe("self-service catalog (ul-platform migration 0024)", () => {
     expect(screen.getByText(/Termos Padrão de Subscrição — Na Pista \(versão 1\)/)).toBeInTheDocument();
   });
 
-  it("contracting sends ONLY the plan, with an Idempotency-Key, and opens the frozen offer on the proposal page", async () => {
+  it("contracting sends the plan and the client's identification, with an Idempotency-Key, and opens the frozen offer on the proposal page", async () => {
     mockApi({
       "GET /catalog/self-service": [() => json(200, { data: [growth] })],
       "POST /organizations/org-a/self-service/contracts": [() => json(201, { data: { proposalId: "prop-1", versionId: "v1", optionId: "o1", contentSha256: "b".repeat(64), priceMinor: "2500000", currency: "AOA", periodDays: 30, validUntil: new Date().toISOString(), replayed: false } })],
     });
     renderCatalog();
     await userEvent.click(await screen.findByRole("button", { name: "Contratar Na Pista Crescimento" }));
+    await fillClientData();
     await waitFor(() => expect(push).toHaveBeenCalledWith("/app/proposals/prop-1"));
     const post = calls.find((c) => c.method === "POST")!;
-    expect(post.body).toEqual({ applicationKey: "NA_PISTA", planKey: "NA_PISTA_GROWTH" });
+    expect(post.body).toEqual({ applicationKey: "NA_PISTA", planKey: "NA_PISTA_GROWTH", client: CLIENT });
     expect(post.key).toMatch(IDEMPOTENCY_KEY_PATTERN);
   });
 
@@ -110,14 +122,26 @@ describe("self-service catalog (ul-platform migration 0024)", () => {
     renderCatalog();
     const button = await screen.findByRole("button", { name: "Contratar Na Pista Crescimento" });
     await userEvent.click(button);
+    await fillClientData();
     expect(await screen.findByText(/Confirme primeiro o seu email/)).toBeInTheDocument();
     expect(screen.getByRole("link", { name: "Reenviar confirmação" })).toHaveAttribute("href", "/verify-email");
     await userEvent.click(button);
+    await fillClientData();
     expect(await screen.findByText(/já tem uma subscrição desta aplicação/)).toBeInTheDocument();
     const posts = calls.filter((c) => c.method === "POST");
     expect(posts).toHaveLength(2);
     expect(posts[1]!.key).toBe(posts[0]!.key);
     expect(push).not.toHaveBeenCalled();
+  });
+
+  it("without NIF and registered address nothing is sent (legal answer 2.1)", async () => {
+    mockApi({ "GET /catalog/self-service": [() => json(200, { data: [growth] })] });
+    renderCatalog();
+    await userEvent.click(await screen.findByRole("button", { name: "Contratar Na Pista Crescimento" }));
+    await fillClientData({ legalName: "Loja", taxId: "", address: "" });
+    expect(await screen.findByText("Indique o NIF.")).toBeInTheDocument();
+    expect(screen.getByText("Indique a morada da sede.")).toBeInTheDocument();
+    expect(calls.filter((c) => c.method === "POST")).toHaveLength(0);
   });
 
   it("a plan whose terms are not approved cannot be contracted here", async () => {
