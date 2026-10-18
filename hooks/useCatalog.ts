@@ -1,6 +1,6 @@
 "use client";
 
-import { listSelfServiceCatalog, startSelfServiceContracting } from "@/lib/api/catalog";
+import { type ClientLegalData, listSelfServiceCatalog, startSelfServiceContracting } from "@/lib/api/catalog";
 import { getBrowserAccessToken } from "@/lib/supabase/client";
 import { useMutation, useQuery } from "@tanstack/react-query";
 
@@ -14,7 +14,7 @@ export function useSelfServiceCatalog() {
 
 export function useStartSelfServiceContracting(organizationId: string) {
   return useMutation({
-    mutationFn: async ({ applicationKey, planKey, idempotencyKey }: { applicationKey: string; planKey: string; idempotencyKey: string }) =>
-      startSelfServiceContracting(await getBrowserAccessToken(), organizationId, { applicationKey, planKey }, idempotencyKey),
+    mutationFn: async ({ applicationKey, planKey, client, idempotencyKey }: { applicationKey: string; planKey: string; client: ClientLegalData; idempotencyKey: string }) =>
+      startSelfServiceContracting(await getBrowserAccessToken(), organizationId, { applicationKey, planKey, client }, idempotencyKey),
   });
 }

@@ -13,16 +13,26 @@ export function listSelfServiceCatalog(accessToken: string | null, applicationKe
  * from here. The answer is a frozen offer (a proposal) accepted through the existing acceptance page. The same
  * Idempotency-Key returns the same offer (200) instead of creating a second one.
  */
+/** ul-platform 0029 (legal answer 2.1): NIF and registered address mandatory; the rest optional. */
+export interface ClientLegalData {
+  legalName?: string;
+  taxId: string;
+  address: string;
+  licenseNumber?: string;
+  managerIdNumber?: string;
+  bankDetails?: string;
+}
+
 export function startSelfServiceContracting(
   accessToken: string | null,
   organizationId: string,
-  plan: { applicationKey: string; planKey: string },
+  plan: { applicationKey: string; planKey: string; client: ClientLegalData },
   idempotencyKey: string,
 ) {
   return apiRequest<SelfServiceOffer>(`/organizations/${encodeURIComponent(organizationId)}/self-service/contracts`, {
     accessToken,
     method: "POST",
-    body: { applicationKey: plan.applicationKey, planKey: plan.planKey },
+    body: { applicationKey: plan.applicationKey, planKey: plan.planKey, client: plan.client },
     headers: { "Idempotency-Key": idempotencyKey },
   });
 }
