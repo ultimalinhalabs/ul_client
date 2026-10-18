@@ -28,7 +28,10 @@ export function ClientLegalDataDialog({
 }) {
   const [form, setForm] = useState({ legalName: defaultLegalName, taxId: "", address: "", licenseNumber: "", managerIdNumber: "", bankDetails: "" });
   const [errors, setErrors] = useState<Partial<Record<"legalName" | "taxId" | "address", string>>>({});
-  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement>) => {
+    setForm((f) => ({ ...f, [key]: e.target.value }));
+    setErrors((prev) => (key in prev ? { ...prev, [key]: undefined } : prev));
+  };
 
   function submit(event: React.FormEvent) {
     event.preventDefault();
