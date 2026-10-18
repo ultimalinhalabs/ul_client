@@ -11,7 +11,15 @@ vi.mock("next/navigation", () => ({
   useRouter: () => ({ push: vi.fn(), replace: vi.fn(), refresh: vi.fn() }),
 }));
 
-const ME = { membershipId: "m-me", organizationId: "org-a", organizationName: "Org A", roleKey: "OWNER", status: "active" };
+const ME = {
+  membershipId: "m-me",
+  organizationId: "org-a",
+  organizationName: "Org A",
+  roleKey: "OWNER",
+  status: "active",
+  organization: { id: "org-a", name: "Org A", slug: "org-a", status: "active" },
+  applications: [],
+};
 const PERMISSIONS = ["membership.read", "membership.update", "membership.remove", "role.assign", "subscription.read", "subscription.manage"];
 
 vi.mock("@/lib/organization/ActiveOrganizationContext", () => ({
@@ -91,36 +99,36 @@ describe("Members: taking access away requires confirmation", () => {
   });
 });
 
-describe("Subscriptions: cancel states the real, immediate consequence", () => {
-  it("says access ends immediately and cannot be undone", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockImplementation(async () =>
-        jsonResponse({
-          data: [
-            {
-              id: "sub-1",
-              application: { key: "NA_PISTA", name: "Na Pista" },
-              plan: { key: "PRO", name: "Pro" },
-              status: "active",
-              currentPeriodStart: "2026-09-01T00:00:00Z",
-              currentPeriodEnd: "2026-10-01T00:00:00Z",
-              canceledAt: null,
-            },
-          ],
-        }),
-      ),
+// Block 2B replaced the former cancel-dialog test: cancelling (and creating) a subscription is no longer offered at all —
+// ul-platform refuses self-service creation for every plan (403 PLAN_REQUIRES_CONTRACT) and a contractual subscription
+// only changes through its contract (409 SUBSCRIPTION_CONTRACT_MANAGED). What must hold now is that the page offers
+// neither action, even to an OWNER holding subscription.manage, and never sends a write.
+describe("Subscriptions: read-only, the lifecycle is contractual (Block 2B)", () => {
+  it("offers no create or cancel action, even to an OWNER with subscription.manage, and only ever reads", async () => {
+    const fetchMock = vi.fn().mockImplementation(async () =>
+      jsonResponse({
+        data: [
+          {
+            id: "sub-1",
+            application: { key: "NA_PISTA", name: "Na Pista" },
+            plan: { key: "PRO", name: "Pro" },
+            status: "active",
+            currentPeriodStart: "2026-09-01T00:00:00Z",
+            currentPeriodEnd: "2026-10-01T00:00:00Z",
+            canceledAt: null,
+          },
+        ],
+      }),
     );
+    vi.stubGlobal("fetch", fetchMock);
 
     renderWithQueryClient(<SubscriptionsClient />);
-    await userEvent.click(await screen.findByRole("button", { name: "Cancelar subscrição de Na Pista" }));
-
-    const dialog = await screen.findByRole("dialog", { name: "Cancelar subscrição" });
-    expect(dialog.textContent).toMatch(/de imediato/);
-    expect(dialog.textContent).not.toMatch(/fim do período/i);
-    expect(within(dialog).getByText(/Irreversível/)).toBeInTheDocument();
-    // "Cancelar" next to "Cancelar subscrição" would be ambiguous — the safe choice is named for what it keeps.
-    expect(within(dialog).getByRole("button", { name: "Manter subscrição" })).toBeInTheDocument();
+    expect(await screen.findByText("Na Pista")).toBeInTheDocument();
+    expect(PERMISSIONS).toContain("subscription.manage");
+    expect(screen.queryByRole("button", { name: /cancelar/i })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /nova subscrição/i })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Ver contratos" })).toHaveAttribute("href", "/app/o/org-a/contracts");
+    for (const [, init] of fetchMock.mock.calls) expect((init as RequestInit | undefined)?.method ?? "GET").toBe("GET");
 
     vi.unstubAllGlobals();
   });

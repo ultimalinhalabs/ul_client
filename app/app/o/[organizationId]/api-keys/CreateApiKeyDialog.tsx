@@ -16,11 +16,17 @@ export function CreateApiKeyDialog({
   onClose,
   organizationId,
   onCreated,
+  accessibleApplicationKeys,
 }: {
   open: boolean;
   onClose: () => void;
   organizationId: string;
   onCreated: (secret: string) => void;
+  /**
+   * Block 2B (G6) — ul-platform creates an organization key only for an application the organization has
+   * EFFECTIVE access to (else 403 APPLICATION_ACCESS_REQUIRED). Only those are offered; the backend still decides.
+   */
+  accessibleApplicationKeys: string[];
 }) {
   const applicationsQuery = useApplications();
   const [applicationKey, setApplicationKey] = useState("");
@@ -71,7 +77,7 @@ export function CreateApiKeyDialog({
           <Select
             label="Aplicação"
             required
-            options={[{ value: "", label: "Selecione uma aplicação" }, ...applicationsQuery.data.map((a) => ({ value: a.key, label: a.name }))]}
+            options={[{ value: "", label: "Selecione uma aplicação" }, ...applicationsQuery.data.filter((a) => accessibleApplicationKeys.includes(a.key)).map((a) => ({ value: a.key, label: a.name }))]}
             value={applicationKey}
             onChange={(e) => {
               setApplicationKey(e.target.value);

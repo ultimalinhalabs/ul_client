@@ -11,6 +11,8 @@
  */
 export const orgKeys = {
   members: (organizationId: string) => ["organization", organizationId, "members"] as const,
+  // ul-platform migration 0025 — pending/answered team invitations.
+  invitations: (organizationId: string) => ["organization", organizationId, "invitations"] as const,
   applications: (organizationId: string) => ["organization", organizationId, "applications"] as const,
   subscriptions: (organizationId: string) => ["organization", organizationId, "subscriptions"] as const,
   subscription: (organizationId: string, subscriptionId: string) =>
@@ -24,4 +26,7 @@ export const orgKeys = {
       ? (["organization", organizationId, "usage", applicationKey, meterKey] as const)
       : (["organization", organizationId, "usage", applicationKey] as const),
   organization: (organizationId: string) => ["organization", organizationId, "detail"] as const,
+  // Block 2B — read-only commercial documents.
+  contracts: (organizationId: string) => ["organization", organizationId, "contracts"] as const,
+  contract: (organizationId: string, contractId: string) => ["organization", organizationId, "contracts", contractId] as const,
 };

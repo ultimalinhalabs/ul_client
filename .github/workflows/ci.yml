@@ -1,0 +1,54 @@
+name: CI
+
+# lint → typecheck → unit tests (vitest) → production build, on every push to
+# master and every pull request (including stacked PRs whose base is another
+# branch). This repository is public: the workflow needs no secret and gets
+# read-only repository access. The NEXT_PUBLIC_* values below are inert
+# placeholders — the build inlines them, nothing calls them, and no test
+# makes a network request (tests stub fetch).
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    env:
+      NEXT_TELEMETRY_DISABLED: "1"
+      NEXT_PUBLIC_SUPABASE_URL: https://ci-placeholder.invalid
+      NEXT_PUBLIC_SUPABASE_ANON_KEY: ci-placeholder-anon-key
+      NEXT_PUBLIC_PLATFORM_API_URL: https://ci-placeholder.invalid
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm test
+
+      - name: Build
+        run: npm run build

@@ -1,3 +1,4 @@
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
@@ -16,9 +17,28 @@ vi.mock("@/lib/supabase/client", () => ({
   createClient: () => ({ auth: { signOut } }),
 }));
 
+// The account frame (logo, sign-out) is not under test; next/image preloading a data-URI logo breaks jsdom.
+vi.mock("@/components/layout/AccountShell", () => ({ AccountShell: ({ children }: { children: React.ReactNode }) => <div>{children}</div> }));
+
 const MEMBERSHIPS: Membership[] = [
-  { membershipId: "m1", organizationId: "org-a", organizationName: "Org A", roleKey: "OWNER", status: "active" },
-  { membershipId: "m2", organizationId: "org-b", organizationName: "Org B", roleKey: "STAFF", status: "active" },
+  {
+    membershipId: "m1",
+    organizationId: "org-a",
+    organizationName: "Org A",
+    roleKey: "OWNER",
+    status: "active",
+    organization: { id: "org-a", name: "Org A", slug: "org-a", status: "active" },
+    applications: [],
+  },
+  {
+    membershipId: "m2",
+    organizationId: "org-b",
+    organizationName: "Org B",
+    roleKey: "STAFF",
+    status: "active",
+    organization: { id: "org-b", name: "Org B", slug: "org-b", status: "active" },
+    applications: [],
+  },
 ];
 
 /**
@@ -36,7 +56,11 @@ describe("Organization resolution (F17 brief, Fase 18 #1, #3, #4)", () => {
   });
 
   it("shows onboarding, never a tenant dashboard, for a user with zero memberships", () => {
-    render(<NoOrganizationState email="nobody@example.com" />);
+    render(
+      <QueryClientProvider client={new QueryClient()}>
+        <NoOrganizationState email="nobody@example.com" userId="u-1" emailVerified />
+      </QueryClientProvider>,
+    );
     expect(screen.getByText("Ainda sem organização")).toBeInTheDocument();
     expect(screen.getByText(/nobody@example.com/)).toBeInTheDocument();
     expect(screen.queryByText(/dashboard/i)).not.toBeInTheDocument();

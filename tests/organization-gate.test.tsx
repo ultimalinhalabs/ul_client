@@ -32,7 +32,15 @@ function jsonResponse(body: unknown, status = 200) {
 }
 
 const MEMBERSHIPS = [
-  { membershipId: "m1", organizationId: "org-a", organizationName: "Org A", roleKey: "OWNER", status: "active" },
+  {
+    membershipId: "m1",
+    organizationId: "org-a",
+    organizationName: "Org A",
+    roleKey: "OWNER",
+    status: "active",
+    organization: { id: "org-a", name: "Org A", slug: "org-a", status: "active" },
+    applications: [],
+  },
 ];
 
 /**

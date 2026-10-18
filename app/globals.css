@@ -91,6 +91,10 @@
   --font-mono: var(--font-jetbrains-mono), ui-monospace, monospace;
 
   /* Type scale — the only sizes components use. */
+  /* Block 2B: display — the one larger step, for commercial documents (proposal, contract) and auth headings. */
+  --text-display: 1.75rem;
+  --text-display--line-height: 2.25rem;
+  --text-display--letter-spacing: -0.02em;
   --text-title: 1.25rem;
   --text-title--line-height: 1.75rem;
   --text-title--letter-spacing: -0.015em;

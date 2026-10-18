@@ -4,11 +4,14 @@ import { organizationHref } from "@/components/layout/navigation";
 import { ErrorAlert } from "@/components/ui/Alert";
 import { buttonClasses } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
+import { PendingInvitationsNotice } from "@/components/organization/PendingInvitationsNotice";
 import { PageHeader } from "@/components/ui/PageHeader";
 import { Panel } from "@/components/ui/Panel";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { StatusBadge } from "@/components/ui/StatusBadge";
+import { useApplications } from "@/hooks/useApplications";
 import { useOrganizationApplications } from "@/hooks/useOrganizationApplications";
+import { mergeApplicationAccess } from "@/lib/commercial/applicationAccess";
 import { roleLabel } from "@/lib/labels";
 import { useActiveOrganization } from "@/lib/organization/ActiveOrganizationContext";
 import { ArrowUpRight } from "lucide-react";
@@ -37,59 +40,51 @@ function Stat({ label, children, href }: { label: string; children: ReactNode; h
 
 /**
  * F17 brief, Fase 4: only real Platform data, never fabricated metrics.
- * The application block depends on `subscription.read` (STAFF doesn't hold
- * it, per ul-platform's seed ROLE_PERMISSIONS) — without it the page says
- * so plainly instead of showing an empty or failing section.
+ * Block 2B: the application block is the organization's EFFECTIVE access from
+ * GET /v1/me (every member sees it — no permission needed); plan names
+ * complete it only for roles holding `subscription.read`. Access is granted
+ * by an activated contract, so the empty state points to Contracts.
  */
 export function DashboardClient() {
   const { organizationId, organizationName, membership, permissions, loading } = useActiveOrganization();
   const canReadSubscriptions = permissions.includes("subscription.read");
-  const appsQuery = useOrganizationApplications(organizationId);
-  const subscriptionsHref = organizationHref(organizationId, "subscriptions");
+  const registry = useApplications();
+  const appsQuery = useOrganizationApplications(organizationId, canReadSubscriptions);
+  const rows = mergeApplicationAccess(membership.applications, registry.data, canReadSubscriptions ? appsQuery.data : undefined);
+  const accessible = rows.filter((row) => row.access);
+  const pending = registry.isLoading || (canReadSubscriptions && appsQuery.isLoading);
 
   return (
     <div className="flex flex-col gap-8">
       <PageHeader title="Início" description={`Resumo de ${organizationName}.`} />
+      <PendingInvitationsNotice />
 
       <section aria-label="Resumo" className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <Stat label="Organização">{organizationName}</Stat>
         <Stat label="O seu papel">{roleLabel(membership.roleKey)}</Stat>
-        {canReadSubscriptions && (
-          <Stat label="Aplicações com acesso" href={organizationHref(organizationId, "applications")}>
-            {appsQuery.isLoading ? <Skeleton className="h-8 w-10" /> : (appsQuery.data?.length ?? "—")}
-          </Stat>
-        )}
+        <Stat label="Aplicações com acesso" href={organizationHref(organizationId, "applications")}>
+          {membership.applications.length}
+        </Stat>
       </section>
 
-      {loading ? (
+      {loading || pending ? (
         <Skeleton className="h-40 w-full" />
-      ) : canReadSubscriptions ? (
-        <Panel
-          title="Acesso a aplicações"
-          description="O que a sua organização pode usar, de acordo com as subscrições ativas."
-          bodyClassName="p-0"
-        >
-          {appsQuery.isLoading ? (
-            <div className="flex flex-col gap-3 p-5">
-              <Skeleton className="h-10 w-full" />
-              <Skeleton className="h-10 w-full" />
-            </div>
-          ) : appsQuery.isError ? (
+      ) : (
+        <Panel title="Acesso a aplicações" description="O que a sua organização pode usar neste momento." bodyClassName="p-0">
+          {appsQuery.isError && (
             <div className="p-5">
-              <ErrorAlert title="Não foi possível carregar as aplicações" error={appsQuery.error} />
+              <ErrorAlert title="Não foi possível carregar os planos" error={appsQuery.error} />
             </div>
-          ) : appsQuery.data && appsQuery.data.length > 0 ? (
+          )}
+          {accessible.length > 0 ? (
             <ul>
-              {appsQuery.data.map((row) => (
-                <li
-                  key={row.application.key}
-                  className="flex items-center justify-between gap-4 border-b border-border-subtle px-5 py-3 last:border-0"
-                >
+              {accessible.map((row) => (
+                <li key={row.key} className="flex items-center justify-between gap-4 border-b border-border-subtle px-5 py-3 last:border-0">
                   <div className="min-w-0">
-                    <p className="truncate text-body font-medium text-fg">{row.application.name}</p>
-                    <p className="truncate text-label text-fg-muted">Plano {row.plan.name}</p>
+                    <p className="truncate text-body font-medium text-fg">{row.name}</p>
+                    {row.plan && <p className="truncate text-label text-fg-muted">Plano {row.plan}</p>}
                   </div>
-                  <StatusBadge status={row.subscription.status} />
+                  <StatusBadge status="active" />
                 </li>
               ))}
             </ul>
@@ -98,22 +93,17 @@ export function DashboardClient() {
               <EmptyState
                 variant="connection"
                 compact
-                title="Ainda sem subscrições ativas"
-                description="Subscreva uma aplicação da Última Linha para começar a usá-la."
+                title="Ainda sem acesso a aplicações"
+                description="O acesso fica disponível quando a Última Linha ativar um contrato da sua organização."
                 action={
-                  <Link href={subscriptionsHref} className={buttonClasses({ variant: "secondary", size: "sm" })}>
-                    Ver subscrições
+                  <Link href={organizationHref(organizationId, "contracts")} className={buttonClasses({ variant: "secondary", size: "sm" })}>
+                    Ver contratos
                   </Link>
                 }
               />
             </div>
           )}
         </Panel>
-      ) : (
-        <p className="rounded-lg border border-border-subtle px-5 py-4 text-body text-fg-muted">
-          O seu papel ({roleLabel(membership.roleKey)}) não inclui a consulta das subscrições da organização. Peça a um
-          proprietário ou administrador se precisar desta informação.
-        </p>
       )}
     </div>
   );

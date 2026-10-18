@@ -17,6 +17,15 @@ export interface ApiRequestOptions {
    * for an unauthenticated caller — the API itself returns 401.
    */
   accessToken: string | null;
+  /**
+   * Extra request headers for the few endpoints whose contract needs one —
+   * `Idempotency-Key` on proposal acceptance (a Server Action) and on
+   * organization creation (from the browser: ul-platform's CORS allow-list
+   * includes Idempotency-Key since fix/organization-creation-hardening).
+   */
+  headers?: Record<string, string>;
+  /** A raw (non-JSON) body — the PDF payment proof (ul-platform migration 0027). Never combined with `body`. */
+  rawBody?: { contentType: string; data: Blob };
 }
 
 /**
@@ -26,16 +35,19 @@ export interface ApiRequestOptions {
  * shape this app invents.
  */
 export async function apiRequest<T>(path: string, options: ApiRequestOptions): Promise<T> {
-  const headers: Record<string, string> = {};
+  const headers: Record<string, string> = { ...options.headers };
   if (options.accessToken) headers.Authorization = `Bearer ${options.accessToken}`;
   if (options.body !== undefined) headers["Content-Type"] = "application/json";
+  if (options.rawBody) headers["Content-Type"] = options.rawBody.contentType;
 
   let response: Response;
   try {
     response = await fetch(`${API_BASE_URL}/v1${path}`, {
       method: options.method ?? "GET",
       headers,
-      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      // Tenant and identity data are never served from Next's data cache.
+      cache: "no-store",
+      body: options.rawBody ? options.rawBody.data : options.body !== undefined ? JSON.stringify(options.body) : undefined,
     });
   } catch {
     throw new ApiError(0, "NETWORK_ERROR", "Could not reach the UL Platform API.");

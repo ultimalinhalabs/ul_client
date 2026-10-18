@@ -2,7 +2,7 @@
 
 import { PermissionGate } from "@/components/auth/PermissionGate";
 import { Column, DataTable } from "@/components/tables/DataTable";
-import { ErrorAlert } from "@/components/ui/Alert";
+import { Alert, ErrorAlert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { Code } from "@/components/ui/Code";
 import { ConfirmDialog } from "@/components/ui/ConfirmDialog";
@@ -21,7 +21,11 @@ import { useState } from "react";
 import { CreateApiKeyDialog } from "./CreateApiKeyDialog";
 
 export function ApiKeysClient() {
-  const { organizationId, permissions } = useActiveOrganization();
+  const { organizationId, membership, permissions } = useActiveOrganization();
+  // Block 2B (G6): a key is a way for YOUR systems to reach an application the organization can already use —
+  // never a substitute for access. Without effective access there is nothing to create a key for.
+  const accessibleApplicationKeys = membership.applications.map((application) => application.key);
+  const hasAccess = accessibleApplicationKeys.length > 0;
   const query = useApiKeys(organizationId);
   const revokeApiKey = useRevokeApiKey(organizationId);
   const pushToast = useToastStore((s) => s.push);
@@ -102,14 +106,23 @@ export function ApiKeysClient() {
         title="Chaves de API"
         description="Credenciais que os sistemas da sua organização usam para comunicar com as aplicações da Última Linha."
         actions={
-          <PermissionGate permission="api_key.manage" permissions={permissions}>
-            <Button onClick={() => setCreateOpen(true)}>
-              <Plus aria-hidden />
-              Criar chave
-            </Button>
-          </PermissionGate>
+          hasAccess ? (
+            <PermissionGate permission="api_key.manage" permissions={permissions}>
+              <Button onClick={() => setCreateOpen(true)}>
+                <Plus aria-hidden />
+                Criar chave
+              </Button>
+            </PermissionGate>
+          ) : undefined
         }
       />
+
+      {canManage && !hasAccess && (
+        <Alert tone="info" title="Sem aplicações disponíveis para chaves">
+          As chaves de API ligam os sistemas da sua organização a aplicações a que ela já tem acesso — não concedem acesso.
+          O acesso fica disponível quando a Última Linha ativar um contrato.
+        </Alert>
+      )}
 
       {query.isLoading && <TableSkeleton cols={4} />}
 
@@ -131,6 +144,7 @@ export function ApiKeysClient() {
         onClose={() => setCreateOpen(false)}
         organizationId={organizationId}
         onCreated={(secret) => setRevealSecret(secret)}
+        accessibleApplicationKeys={accessibleApplicationKeys}
       />
 
       {revealSecret && (
