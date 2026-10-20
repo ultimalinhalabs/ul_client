@@ -86,14 +86,14 @@ export function UsageClient() {
           {usageQuery.data && usageQuery.data.meters.length > 0 && (
             <Panel title={selected?.application.name} description={periodLabel} bodyClassName="p-0">
               <dl>
-                {usageQuery.data.meters.map((meter) => (
-                  <div key={meter.meterKey} className="flex items-center justify-between gap-4 border-b border-border-subtle px-5 py-3 last:border-0">
+                {usageQuery.data.meters.map((entry) => (
+                  <div key={entry.meter.key} className="flex items-center justify-between gap-4 border-b border-border-subtle px-5 py-3 last:border-0">
                     <dt className="min-w-0">
-                      <Code muted>{meter.meterKey}</Code>
+                      <Code muted>{entry.meter.key}</Code>
                     </dt>
                     <dd className="text-right">
-                      <span className="text-body font-semibold tabular-nums text-fg">{formatQuantity(meter.total)}</span>{" "}
-                      <span className="text-label text-fg-muted">{meter.meterUnit}</span>
+                      <span className="text-body font-semibold tabular-nums text-fg">{formatQuantity(entry.quantity)}</span>{" "}
+                      <span className="text-label text-fg-muted">{entry.meter.unit}</span>
                     </dd>
                   </div>
                 ))}
