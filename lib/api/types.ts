@@ -144,17 +144,21 @@ export interface WebhookEndpointWithSecret extends WebhookEndpoint {
   secret: string;
 }
 
+/**
+ * Mirrors ul-platform modules/usage/service.ts exactly: `quantity` is a JSON number (the sum of the meter's events;
+ * 0 for a range with no events) and each per-application entry nests its meter as `{ key, unit }`.
+ */
 export interface UsageForMeter {
   application: { key: string; name: string };
   meter: { key: string; unit: string };
   period: { from: string | null; to: string | null };
-  total: string | null;
+  quantity: number;
 }
 
 export interface UsageForApplication {
   application: { key: string; name: string };
   period: { from: string | null; to: string | null };
-  meters: { meterKey: string; meterUnit: string; total: string | null }[];
+  meters: { meter: { key: string; unit: string }; quantity: number }[];
 }
 
 export interface ServiceScope {
